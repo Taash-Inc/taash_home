@@ -33,6 +33,54 @@ async function verifyTurnstile(token: string): Promise<boolean> {
   }
 }
 
+// Add contact to Loops.so
+async function addToLoops(data: {
+  email: string;
+  firstName: string;
+  lastName: string;
+  profession: string;
+  monthlyIncome: string | null;
+}): Promise<{ success: boolean; error?: string }> {
+  const apiKey = process.env.LOOPS_API_KEY;
+
+  if (!apiKey) {
+    console.warn('Loops API key not configured, skipping');
+    return { success: true }; // Don't block signup if Loops isn't configured
+  }
+
+  try {
+    const response = await fetch('https://app.loops.so/api/v1/contacts/create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        email: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        source: 'waitlist',
+        userGroup: 'waitlist',
+        // Custom properties - these will be created in Loops automatically
+        profession: data.profession,
+        monthlyIncome: data.monthlyIncome || '',
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Loops API error:', response.status, errorData);
+      // Don't fail the signup if Loops fails
+      return { success: false, error: errorData?.message || 'Loops API error' };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Loops API error:', error);
+    return { success: false, error: 'Failed to connect to Loops' };
+  }
+}
+
 // Insert into Supabase using REST API
 async function insertToSupabase(data: {
   full_name: string;
@@ -132,6 +180,21 @@ export async function POST(request: NextRequest) {
       console.error('Supabase error:', error);
       return NextResponse.json({ error: 'Failed to join waitlist' }, { status: 500 });
     }
+
+    // Add to Loops.so for email marketing (non-blocking)
+    // Split full name into first and last name
+    const nameParts = sanitizedData.fullName.split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+
+    // Fire and forget - don't wait for Loops to complete
+    addToLoops({
+      email: sanitizedData.email,
+      firstName,
+      lastName,
+      profession: sanitizedData.profession,
+      monthlyIncome: sanitizedData.monthlyIncome,
+    }).catch((err) => console.error('Loops background error:', err));
 
     return NextResponse.json(
       { message: 'Successfully joined the waitlist!', data },

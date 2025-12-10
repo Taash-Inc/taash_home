@@ -300,7 +300,7 @@ export default function PrivacyPage() {
               <li>The right to non-discrimination for exercising your privacy rights</li>
             </ul>
             <p className='text-text-gray mt-4'>
-              To exercise these rights, please contact us at privacy@taash.app.
+              To exercise these rights, please contact us at privacy@taash.tax.
             </p>
           </section>
 
@@ -348,7 +348,7 @@ export default function PrivacyPage() {
               collect personal information from children under 18. If we learn we have collected
               personal information from a child under 18, we will delete that information as quickly
               as possible. If you believe we might have any information from or about a child under
-              18, please contact us at privacy@taash.app.
+              18, please contact us at privacy@taash.tax.
             </p>
           </section>
 
@@ -406,7 +406,7 @@ export default function PrivacyPage() {
             </p>
             <div className='mt-4 p-4 bg-light-blue rounded-lg'>
               <p className='text-primary-dark font-medium'>Taash Technologies Inc.</p>
-              <p className='text-text-gray'>Email: privacy@taash.app</p>
+              <p className='text-text-gray'>Email: privacy@taash.tax</p>
               <p className='text-text-gray'>For data protection inquiries: dpo@taash.app</p>
             </div>
           </section>

@@ -40,13 +40,13 @@ export default function Hero() {
             </p>
 
             {/* CTA Buttons */}
-            <div className='flex flex-wrap gap-4 pt-2'>
+            <div className='flex flex-col sm:flex-row gap-3 sm:gap-4 pt-2'>
               <Link
                 href='#waitlist'
-                className='bg-primary-dark text-white px-7 py-3.5 rounded-lg font-medium hover:bg-text-dark transition-colors'>
+                className='bg-primary-dark text-white px-6 sm:px-7 py-3 sm:py-3.5 rounded-lg font-medium hover:bg-text-dark transition-colors text-center'>
                 Join Waitlist
               </Link>
-              <button className='bg-white text-primary-dark px-7 py-3.5 rounded-lg font-medium border border-gray-200 hover:bg-gray-50 transition-colors'>
+              <button className='bg-white text-primary-dark px-6 sm:px-7 py-3 sm:py-3.5 rounded-lg font-medium border border-gray-200 hover:bg-gray-50 transition-colors text-sm sm:text-base'>
                 Try Tax Estimator (Coming Soon)
               </button>
             </div>
@@ -78,12 +78,12 @@ export default function Hero() {
               <AnimatedTaxCard />
 
               {/* Floating Card - Expenses This Month */}
-              <div className='absolute bottom-16 right-0 md:right-4 bg-white rounded-2xl shadow-xl p-4 z-20 flex items-center gap-3'>
+              <div className='absolute bottom-16 right-0 md:right-4 bg-white rounded-2xl shadow-xl p-3 sm:p-4 z-20 flex items-center gap-2 sm:gap-3 hidden sm:flex'>
                 <div>
                   <p className='text-xs text-text-gray mb-1'>Expenses This Month</p>
-                  <p className='text-2xl font-bold text-primary-dark'>₦128,400</p>
+                  <p className='text-xl sm:text-2xl font-bold text-primary-dark'>₦128,400</p>
                 </div>
-                <div className='w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-green-400 to-teal-500 flex-shrink-0'>
+                <div className='w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-gradient-to-br from-green-400 to-teal-500 flex-shrink-0'>
                   <Image
                     src='/avatar-small.png'
                     alt='User avatar'
@@ -96,7 +96,7 @@ export default function Hero() {
               </div>
 
               {/* Yellow Calculator/Percentage Icon - Top Right */}
-              <div className='absolute top-8 right-8 md:right-16 w-14 h-14 bg-[#FFEA66] rounded-full flex items-center justify-center z-20 shadow-lg'>
+              <div className='absolute top-8 right-8 md:right-16 w-10 h-10 sm:w-14 sm:h-14 bg-[#FFEA66] rounded-full flex items-center justify-center z-20 shadow-lg hidden sm:flex'>
                 <svg
                   width='24'
                   height='24'
@@ -115,10 +115,10 @@ export default function Hero() {
               </div>
 
               {/* Small Blue Dot - Top Right */}
-              <div className='absolute top-6 right-32 w-3 h-3 bg-[#4A7FA7] rounded-full z-20'></div>
+              <div className='absolute top-6 right-32 w-3 h-3 bg-[#4A7FA7] rounded-full z-20 hidden md:block'></div>
 
               {/* Blue Mobile Banking Icon - Left Side */}
-              <div className='absolute -left-4 md:-left-8 top-[60%] w-14 h-14 bg-[#4A7FA7] rounded-full flex items-center justify-center z-20 shadow-lg'>
+              <div className='absolute -left-4 md:-left-8 top-[60%] w-10 h-10 sm:w-14 sm:h-14 bg-[#4A7FA7] rounded-full flex items-center justify-center z-20 shadow-lg hidden sm:flex'>
                 <svg
                   width='24'
                   height='24'
@@ -137,7 +137,7 @@ export default function Hero() {
               </div>
 
               {/* Light Blue Dot - Bottom Right */}
-              <div className='absolute bottom-8 right-24 w-5 h-5 bg-[#A3D3FF] rounded-full z-20'></div>
+              <div className='absolute bottom-8 right-24 w-5 h-5 bg-[#A3D3FF] rounded-full z-20 hidden md:block'></div>
             </div>
           </div>
         </div>
