@@ -128,7 +128,7 @@ export default function AppDownload() {
                   className='absolute flex items-center justify-center pointer-events-none'
                   style={{
                     top: '26%',
-                    left: '18%',
+                    left: '19.5%',
                     width: '40%',
                     height: '25%',
                   }}>
