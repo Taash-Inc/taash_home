@@ -17,11 +17,11 @@ export default function AppDownload() {
   }, []);
 
   return (
-    <section id='download' className='py-20 bg-white overflow-hidden'>
+    <section id='download' className='py-20 bg-white'>
       <div className='max-w-7xl mx-auto px-6'>
         {/* Grey background card */}
-        <div className='bg-[#f1f5f9] rounded-3xl overflow-hidden'>
-          <div className='flex flex-col lg:flex-row items-center'>
+        <div className='bg-[#f1f5f9] rounded-3xl overflow-hidden relative'>
+          <div className='flex flex-col lg:flex-row'>
             {/* Left Content */}
             <div className='flex-1 text-center lg:text-left p-8 md:p-12 lg:p-16'>
               {/* Coming Soon Badge - Yellow */}
@@ -87,7 +87,7 @@ export default function AppDownload() {
               </p>
 
               {/* App Store Badges */}
-              <div className='flex flex-row items-center justify-center lg:justify-start gap-4'>
+              <div className='flex flex-row items-center justify-center lg:justify-start gap-3 sm:gap-4'>
                 {/* App Store */}
                 <Link href='#' aria-label='Download on the App Store'>
                   <Image
@@ -95,7 +95,7 @@ export default function AppDownload() {
                     alt='Download on the App Store'
                     width={140}
                     height={42}
-                    className='h-[42px] w-auto'
+                    className='h-[36px] sm:h-[42px] w-auto'
                   />
                 </Link>
 
@@ -106,29 +106,29 @@ export default function AppDownload() {
                     alt='Get it on Google Play'
                     width={140}
                     height={42}
-                    className='h-[60px] w-auto'
+                    className='h-[50px] sm:h-[60px] w-auto'
                   />
                 </Link>
               </div>
             </div>
 
             {/* Right Content - Phone with Hand */}
-            <div className='flex-1 relative flex justify-center lg:justify-end min-h-[400px] md:min-h-[500px]'>
-              <div className='relative w-[350px] md:w-[450px] lg:w-[520px] translate-y-8'>
+            <div className='flex-1 relative min-h-[350px] sm:min-h-[400px] md:min-h-[500px] hidden sm:flex justify-center md:justify-end items-end'>
+              <div className='relative w-[280px] sm:w-[350px] md:w-[450px] lg:w-[595px] translate-y-6 sm:translate-y-9 translate-x-4 sm:translate-x-8 md:translate-x-12 lg:translate-x-19'>
                 <Image
                   src='/phone-hand.png'
                   alt='Taash app on phone'
                   width={533}
                   height={584}
-                  className='w-full h-auto -scale-x-105'
+                  className='w-full h-auto -scale-x-100'
                   priority
                 />
                 {/* Taash Logo centered on phone screen */}
                 <div
                   className='absolute flex items-center justify-center pointer-events-none'
                   style={{
-                    top: '22%',
-                    left: '19%',
+                    top: '26%',
+                    left: '18%',
                     width: '40%',
                     height: '25%',
                   }}>
@@ -138,7 +138,7 @@ export default function AppDownload() {
                     viewBox='0 0 97 28'
                     fill='none'
                     xmlns='http://www.w3.org/2000/svg'
-                    className='w-[65px] md:w-[85px]'>
+                    className='w-[50px] sm:w-[65px] md:w-[85px]'>
                     <g clipPath='url(#clip0_311_1989)'>
                       <path
                         d='M0 7.5965C6.65056e-05 7.25544 0.361379 7.0361 0.663416 7.19357L12.1862 13.202L23.4698 7.31812C23.7719 7.16065 24.1332 7.38026 24.1332 7.72136V19.9987C24.1332 20.3398 23.7719 20.5594 23.4698 20.402L11.9467 14.3929L0.663416 20.2771C0.361352 20.4346 0 20.2149 0 19.8738V7.5965Z'

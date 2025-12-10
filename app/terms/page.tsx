@@ -245,7 +245,7 @@ export default function TermsPage() {
             </p>
             <div className='mt-4 p-4 bg-light-blue rounded-lg'>
               <p className='text-primary-dark font-medium'>Taash Technologies Inc.</p>
-              <p className='text-text-gray'>Email: legal@taash.app</p>
+              <p className='text-text-gray'>Email: legal@taash.tax</p>
             </div>
           </section>
         </div>
