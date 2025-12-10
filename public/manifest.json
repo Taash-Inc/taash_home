@@ -1,0 +1,21 @@
+{
+  "name": "Taash - Tax & Finance for African Freelancers",
+  "short_name": "Taash",
+  "description": "AI-powered platform helping African freelancers track expenses, estimate taxes, and save smarter.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

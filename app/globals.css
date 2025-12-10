@@ -1,26 +1,131 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
+  /* Primary colors */
+  --primary-dark: #0f172a;
+  --primary-blue: #3b82f6;
+  --primary-blue-hover: #2563eb;
+
+  /* Background colors */
   --background: #ffffff;
+  --light-blue: #dbeafe;
+  --lighter-blue: #eff6ff;
+  --lightest-blue: #f0f9ff;
+  --yellow-accent: #fef9c3;
+
+  /* Text colors */
   --foreground: #171717;
+  --text-dark: #1e293b;
+  --text-gray: #64748b;
+  --text-light-gray: #94a3b8;
+
+  /* Utility colors */
+  --green: #22c55e;
+  --green-light: #dcfce7;
+  --border: #e2e8f0;
+  --border-light: #f1f5f9;
 }
 
 @theme inline {
+  /* Map CSS variables to Tailwind utilities */
+  --color-primary-dark: var(--primary-dark);
+  --color-primary-blue: var(--primary-blue);
+  --color-primary-blue-hover: var(--primary-blue-hover);
+
   --color-background: var(--background);
+  --color-light-blue: var(--light-blue);
+  --color-lighter-blue: var(--lighter-blue);
+  --color-lightest-blue: var(--lightest-blue);
+  --color-yellow-accent: var(--yellow-accent);
+
   --color-foreground: var(--foreground);
+  --color-text-dark: var(--text-dark);
+  --color-text-gray: var(--text-gray);
+  --color-text-light-gray: var(--text-light-gray);
+
+  --color-green: var(--green);
+  --color-green-light: var(--green-light);
+  --color-border: var(--border);
+  --color-border-light: var(--border-light);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--border-light);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-light-gray);
+}
+
+/* Modal animations */
+@keyframes shrink-width {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+.animate-shrink-width {
+  animation: shrink-width 8s linear forwards;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes zoom-in-95 {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-in {
+  animation-fill-mode: both;
+}
+
+.fade-in {
+  animation-name: fade-in;
+}
+
+.zoom-in-95 {
+  animation-name: zoom-in-95;
+}
+
+.duration-200 {
+  animation-duration: 200ms;
 }
