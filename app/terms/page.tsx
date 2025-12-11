@@ -32,7 +32,7 @@ export default function TermsPage() {
 
       {/* Content */}
       <div className='max-w-4xl mx-auto px-6 py-12'>
-        <div className='prose prose-lg max-w-none'>
+        <div className='prose prose-lg max-w-none font-sans'>
           <section className='mb-10'>
             <h2 className='text-2xl font-bold text-primary-dark mb-4'>1. Agreement to Terms</h2>
             <p className='text-text-gray mb-4'>
