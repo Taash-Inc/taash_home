@@ -33,7 +33,7 @@ export default function PrivacyPage() {
 
       {/* Content */}
       <div className='max-w-4xl mx-auto px-6 py-12'>
-        <div className='prose prose-lg max-w-none'>
+        <div className='prose prose-lg max-w-none font-sans'>
           <section className='mb-10'>
             <h2 className='text-2xl font-bold text-primary-dark mb-4'>1. Introduction</h2>
             <p className='text-text-gray mb-4'>
@@ -407,7 +407,6 @@ export default function PrivacyPage() {
             <div className='mt-4 p-4 bg-light-blue rounded-lg'>
               <p className='text-primary-dark font-medium'>Taash Technologies Inc.</p>
               <p className='text-text-gray'>Email: privacy@taash.tax</p>
-              <p className='text-text-gray'>For data protection inquiries: dpo@taash.app</p>
             </div>
           </section>
         </div>
