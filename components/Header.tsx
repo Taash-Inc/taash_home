@@ -2,10 +2,23 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showMobileWaitlist, setShowMobileWaitlist] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      // Show the waitlist button after scrolling past ~500px (past the hero CTA buttons)
+      setShowMobileWaitlist(window.scrollY > 200);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    handleScroll(); // Check initial position
+
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
     <header
@@ -108,12 +121,17 @@ export default function Header() {
                 className='text-primary-dark hover:text-primary-blue transition-colors font-medium py-2'>
                 Resources
               </Link>
-              <Link
-                href='#waitlist'
-                onClick={() => setMobileMenuOpen(false)}
-                className='bg-primary-dark text-white px-5 py-3.5 rounded-lg font-medium text-center hover:bg-text-dark transition-colors mt-2'>
-                Join Waitlist
-              </Link>
+              <div
+                className={`overflow-hidden transition-all duration-400 ease-in-out ${
+                  showMobileWaitlist ? 'max-h-20 opacity-100 mt-2' : 'max-h-0 opacity-0 mt-0'
+                }`}>
+                <Link
+                  href='#waitlist'
+                  onClick={() => setMobileMenuOpen(false)}
+                  className='block bg-primary-dark text-white px-5 py-3.5 rounded-lg font-medium text-center hover:bg-text-dark transition-colors'>
+                  Join Waitlist
+                </Link>
+              </div>
             </div>
           </div>
         )}
