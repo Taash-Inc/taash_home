@@ -70,7 +70,7 @@ export default function AnimatedTaxCard() {
   const current = taxScenarios[currentIndex];
 
   return (
-    <div className='absolute top-24 -left-8 md:-left-4 bg-white rounded-2xl shadow-xl p-4 z-20 min-w-[180px]'>
+    <div className='absolute top-24 -left-2 sm:-left-8 md:-left-4 bg-white rounded-2xl shadow-xl p-3 sm:p-4 z-20 min-w-40 sm:min-w-[180px]'>
       <p
         className={`text-xs text-text-gray mb-1 transition-opacity duration-300 ${
           isAnimating ? 'opacity-0' : 'opacity-100'
