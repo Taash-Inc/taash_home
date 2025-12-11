@@ -6,6 +6,7 @@ import {
   WebsiteSchema,
 } from '@/components/StructuredData';
 import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import type { Metadata, Viewport } from 'next';
 import { JetBrains_Mono, Space_Grotesk } from 'next/font/google';
 import './globals.css';
@@ -132,6 +133,7 @@ export default function RootLayout({
       <body className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
         {children}
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
