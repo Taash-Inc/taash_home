@@ -111,7 +111,7 @@ export default function Header() {
               <Link
                 href='#waitlist'
                 onClick={() => setMobileMenuOpen(false)}
-                className='bg-primary-dark text-white px-5 py-3 rounded-full font-medium text-center hover:bg-text-dark transition-colors mt-2'>
+                className='bg-primary-dark text-white px-5 py-3.5 rounded-lg font-medium text-center hover:bg-text-dark transition-colors mt-2'>
                 Join Waitlist
               </Link>
             </div>

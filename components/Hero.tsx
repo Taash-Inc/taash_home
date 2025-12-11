@@ -40,13 +40,13 @@ export default function Hero() {
             </p>
 
             {/* CTA Buttons */}
-            <div className='flex flex-col sm:flex-row gap-3 sm:gap-4 pt-2'>
+            <div className='flex flex-col sm:flex-row gap-3 sm:gap-4 pt-2 w-full sm:w-auto'>
               <Link
                 href='#waitlist'
-                className='bg-primary-dark text-white px-6 sm:px-7 py-3 sm:py-3.5 rounded-lg font-medium hover:bg-text-dark transition-colors text-center'>
+                className='bg-primary-dark text-white px-6 sm:px-7 py-3.5 rounded-lg font-medium hover:bg-text-dark transition-colors text-center w-full sm:w-auto'>
                 Join Waitlist
               </Link>
-              <button className='bg-white text-primary-dark px-6 sm:px-7 py-3 sm:py-3.5 rounded-lg font-medium border border-gray-200 hover:bg-gray-50 transition-colors text-sm sm:text-base'>
+              <button className='bg-white text-primary-dark px-6 sm:px-7 py-3.5 rounded-lg font-medium border border-gray-200 hover:bg-gray-50 transition-colors text-center w-full sm:w-auto'>
                 Try Tax Estimator (Coming Soon)
               </button>
             </div>
@@ -57,7 +57,7 @@ export default function Hero() {
             {/* Main Hero Image Container */}
             <div className='relative h-full flex items-center justify-center'>
               {/* Large Gradient Ellipse Background with clipped image - wider ellipse shape */}
-              <div className='relative w-[450px] h-[320px] md:w-[650px] md:h-[450px] lg:w-[750px] lg:h-[520px] rounded-[50%] overflow-hidden'>
+              <div className='relative w-[340px] h-[298px] sm:w-[450px] sm:h-[320px] md:w-[650px] md:h-[450px] lg:w-[750px] lg:h-[520px] rounded-[50%] overflow-hidden mx-auto'>
                 {/* Gradient background - matching Figma */}
                 <div className='absolute inset-0 bg-gradient-to-b from-[#A3D3FF] to-[#FFEA66]'></div>
 
