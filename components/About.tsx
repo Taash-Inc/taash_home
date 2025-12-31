@@ -63,12 +63,11 @@ export default function About() {
                 Why Taash Exists
               </h2>
               <p className='text-text-dark text-lg leading-relaxed'>
-                Freelancers, creators, and small business owners across Africa struggle with one
-                thing—<strong>financial clarity</strong>. They face tax confusion, unpredictable
-                cash flow, and no simple way to track earnings, savings, or deadlines. Taash was
-                built to fix that. We exist to simplify taxes, automate compliance, and give you a
-                clear view of your finances—so you{' '}
-                <strong>never miss a deadline, lose money, or stay confused again.</strong>
+                Taash was built to remove confusion around tax and money management in Nigeria. Many
+                freelancers, workers, and small business owners struggle to track income, record
+                expenses, and know what they owe. We simplify this by turning everyday transactions
+                into clear, usable records you can trust without accounting knowledge. No guesswork.
+                No spreadsheets. Just clarity.
               </p>
             </div>
 

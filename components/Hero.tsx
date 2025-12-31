@@ -22,21 +22,24 @@ export default function Hero() {
                   fill='black'
                 />
               </svg>
-              Made for African Freelancers
+              Made for Nigerian Freelancers
             </div>
 
             {/* Headline */}
             <h1 className='text-4xl md:text-5xl lg:text-[3.25rem] font-bold text-primary-dark leading-[1.15] tracking-tight'>
-              Effortless Tax &amp;
+              Effortless Tax and
               <br />
-              Finance for African
+              Finance for
               <br />
-              Freelancers
+              Nigeria's New
+              <br />
+              Workforce
             </h1>
 
             {/* Subheadline */}
             <p className='text-lg text-text-gray max-w-md leading-relaxed'>
-              AI-powered platform helping you track expenses, estimate taxes, and save smarter.
+              Taash turns daily income and spending into clear records that are always
+              tax-ready.Built for freelancers, workers, creators, and small businesses in Nigeria.
             </p>
 
             {/* CTA Buttons */}

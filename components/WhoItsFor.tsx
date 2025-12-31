@@ -4,19 +4,19 @@ export default function WhoItsFor() {
   const audiences = [
     {
       title: 'Freelancers',
-      description: 'Keep track of your income and pay the correct tax—without stress.',
+      description: 'Track income, record expenses, and stay tax-ready without stress.',
       gradient: 'from-orange-200 to-amber-100',
       image: '/freelancers.png',
     },
     {
-      title: 'Creators',
-      description: 'Know what to save from every brand deal and stay tax-ready.',
+      title: 'Small Businesses',
+      description: 'Manage business income and expenses without complex accounting tools.',
       gradient: 'from-purple-200 to-pink-100',
       image: '/creators.png',
     },
     {
-      title: 'SMEs',
-      description: 'Manage business expenses and stay compliant effortlessly.',
+      title: 'Workers',
+      description: 'Understand your earnings and keep clear records for personal tax needs.',
       gradient: 'from-blue-200 to-cyan-100',
       image: '/smes.png',
     },

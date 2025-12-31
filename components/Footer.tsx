@@ -16,7 +16,9 @@ export default function Footer() {
           {/* Social Media Icons */}
           <div className='flex items-center gap-4'>
             <Link
-              href='#'
+              href='https://www.instagram.com/taashapp/'
+              target='_blank'
+              rel='noopener noreferrer'
               className='w-10 h-10 rounded-full bg-gray-700 hover:bg-primary-blue flex items-center justify-center transition-colors'
               aria-label='Follow us on Instagram'>
               <svg className='w-5 h-5' fill='currentColor' viewBox='0 0 24 24'>
@@ -24,7 +26,9 @@ export default function Footer() {
               </svg>
             </Link>
             <Link
-              href='#'
+              href='https://x.com/taashapp'
+              target='_blank'
+              rel='noopener noreferrer'
               className='w-10 h-10 rounded-full bg-gray-700 hover:bg-primary-blue flex items-center justify-center transition-colors'
               aria-label='Follow us on X (Twitter)'>
               <svg className='w-5 h-5' fill='currentColor' viewBox='0 0 24 24'>
@@ -32,7 +36,9 @@ export default function Footer() {
               </svg>
             </Link>
             <Link
-              href='#'
+              href='https://www.linkedin.com/company/taash-technologies-inc/'
+              target='_blank'
+              rel='noopener noreferrer'
               className='w-10 h-10 rounded-full bg-gray-700 hover:bg-primary-blue flex items-center justify-center transition-colors'
               aria-label='Follow us on LinkedIn'>
               <svg className='w-5 h-5' fill='currentColor' viewBox='0 0 24 24'>
@@ -40,7 +46,9 @@ export default function Footer() {
               </svg>
             </Link>
             <Link
-              href='#'
+              href='https://www.facebook.com/profile.php?id=61585718545111'
+              target='_blank'
+              rel='noopener noreferrer'
               className='w-10 h-10 rounded-full bg-gray-700 hover:bg-primary-blue flex items-center justify-center transition-colors'
               aria-label='Follow us on Facebook'>
               <svg className='w-5 h-5' fill='currentColor' viewBox='0 0 24 24'>
@@ -48,7 +56,9 @@ export default function Footer() {
               </svg>
             </Link>
             <Link
-              href='#'
+              href='https://www.youtube.com/@taashapp'
+              target='_blank'
+              rel='noopener noreferrer'
               className='w-10 h-10 rounded-full bg-gray-700 hover:bg-primary-blue flex items-center justify-center transition-colors'
               aria-label='Subscribe to our YouTube channel'>
               <svg className='w-5 h-5' fill='currentColor' viewBox='0 0 24 24'>

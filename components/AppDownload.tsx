@@ -79,11 +79,12 @@ export default function AppDownload() {
               </div>
 
               <h2 className='text-3xl md:text-4xl font-bold text-primary-dark mb-4'>
-                The Taash App Is Almost Here.
+                The Taash App is launching soon.
               </h2>
               <p className='text-lg text-text-gray max-w-lg mx-auto lg:mx-0 mb-8'>
-                Your AI-powered tax and finance assistant is coming soon to iOS and Android. Track
-                expenses, estimate taxes, and stay compliant with zero stress.
+                Your automated tax and finance assistant is coming soon to iOS and Android to help
+                you stay compliant with zero stress.Join the waitlist to get early access, updates,
+                and priority features as we roll out in Nigeria.
               </p>
 
               {/* App Store Badges */}
