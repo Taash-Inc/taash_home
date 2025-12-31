@@ -13,8 +13,9 @@ export default function Features() {
           className='w-14 h-14 object-contain'
         />
       ),
-      title: 'Smart Expense Categorisation',
-      description: 'AI automatically classifies all income and spending.',
+      title: 'Track Income',
+      description:
+        'See all your earnings in one place, from salary, freelance work, or business payments.',
     },
     {
       icon: (
@@ -26,8 +27,9 @@ export default function Features() {
           className='w-14 h-14 object-contain'
         />
       ),
-      title: 'Tax Estimator',
-      description: 'Get instant, accurate tax calculations based on your earnings.',
+      title: 'Record Expenses',
+      description:
+        'Keep clear records of your spending so nothing gets missed when tax time comes.',
     },
     {
       icon: (
@@ -39,8 +41,8 @@ export default function Features() {
           className='w-14 h-14 object-contain'
         />
       ),
-      title: 'Savings Tips',
-      description: 'Stay ahead with AI-powered saving tips tailored to your income patterns.',
+      title: 'Know Your Tax',
+      description: 'Get a clear estimate of what you may owe based on your income and expenses.',
     },
     {
       icon: (
@@ -52,8 +54,9 @@ export default function Features() {
           className='w-14 h-14 object-contain'
         />
       ),
-      title: 'Receipt Upload',
-      description: 'Snap a photo or upload a receipt—Taash extracts deductible items instantly.',
+      title: 'Stay Organised',
+      description:
+        'Generate invoices, save receipts and records so your finances are always clean and ready.',
     },
   ];
 
