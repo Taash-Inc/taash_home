@@ -49,9 +49,11 @@ export default function Hero() {
                 className='bg-primary-dark text-white px-6 sm:px-7 py-3.5 rounded-lg font-medium hover:bg-text-dark transition-colors text-center w-full sm:w-auto'>
                 Join Waitlist
               </Link>
-              <button className='bg-white text-primary-dark px-6 sm:px-7 py-3.5 rounded-lg font-medium border border-gray-200 hover:bg-gray-50 transition-colors text-center w-full sm:w-auto'>
-                Try Tax Estimator (Coming Soon)
-              </button>
+              <Link
+                href='#tax-estimator'
+                className='bg-white text-primary-dark px-6 sm:px-7 py-3.5 rounded-lg font-medium border border-gray-200 hover:bg-gray-50 transition-colors text-center w-full sm:w-auto'>
+                Try Tax Estimator
+              </Link>
             </div>
           </div>
 
