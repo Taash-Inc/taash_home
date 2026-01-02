@@ -82,9 +82,6 @@ export default function TaxEstimator() {
     // Basic Relief: MAX(1% of gross, ₦350,000)
     const basicRelief = Math.max(grossIncome * 0.01, 350000);
 
-    // 20% Consolidated Relief
-    const consolidatedRelief = grossIncome * 0.2;
-
     // Pension (max 8% of gross)
     const pension = Math.min(grossIncome * (pensionRate / 100), grossIncome * 0.08);
 
@@ -94,11 +91,12 @@ export default function TaxEstimator() {
     // NHIS
     const nhis = parseAmount(nhisAmount) * multiplier;
 
-    // Rent Deduction (max ₦300,000)
-    const rent = Math.min(parseAmount(rentDeduction) * multiplier, 300000);
+    // Rent Deduction - NTA 2025: Lower of ₦500,000 or 20% of annual rent paid
+    const annualRentPaid = parseAmount(rentDeduction) * multiplier;
+    const rent = Math.min(annualRentPaid * 0.2, 500000, annualRentPaid);
 
-    // Total Reliefs
-    const totalReliefs = basicRelief + consolidatedRelief + pension + nhf + nhis + rent;
+    // Total Reliefs (NTA 2025 - Consolidated Relief replaced by Rent Deduction)
+    const totalReliefs = basicRelief + pension + nhf + nhis + rent;
 
     // Step 3: Taxable Income
     const taxableIncome = Math.max(0, grossIncome - totalReliefs);
@@ -114,11 +112,11 @@ export default function TaxEstimator() {
     return {
       grossIncome,
       basicRelief,
-      consolidatedRelief,
       pension,
       nhf,
       nhis,
       rent,
+      annualRentPaid,
       totalReliefs,
       taxableIncome,
       annualTax,
@@ -148,11 +146,8 @@ export default function TaxEstimator() {
     // Basic Relief: MAX(1% of gross, ₦350,000)
     const basicRelief = Math.max(gross * 0.01, 350000);
 
-    // 20% Consolidated Relief
-    const consolidatedRelief = gross * 0.2;
-
-    // Total deductions (reliefs + business expenses)
-    const totalReliefs = basicRelief + consolidatedRelief;
+    // Total deductions (reliefs + business expenses) - NTA 2025
+    const totalReliefs = basicRelief;
     const totalDeductions = totalReliefs + expenses;
 
     // Taxable Income
@@ -170,7 +165,6 @@ export default function TaxEstimator() {
       grossIncome: gross,
       businessExpenses: expenses,
       basicRelief,
-      consolidatedRelief,
       totalReliefs,
       totalDeductions,
       taxableIncome,
@@ -538,7 +532,9 @@ export default function TaxEstimator() {
                           className='w-full pl-10 pr-4 py-3 text-lg font-bold text-primary-dark border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-0 focus:outline-none transition-colors bg-green-50/30'
                         />
                       </div>
-                      <p className='text-xs text-text-gray mt-1'>Max ₦300,000/year</p>
+                      <p className='text-xs text-text-gray mt-1'>
+                        NTA 2025: Lower of ₦500,000 or 20% of rent
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -676,17 +672,6 @@ export default function TaxEstimator() {
                           userType === 'salary'
                             ? salaryCalculations.basicRelief
                             : creatorCalculations.basicRelief
-                        )}
-                      </span>
-                    </div>
-                    <div className='flex justify-between text-sm'>
-                      <span className='text-text-gray'>20% Consolidated Relief</span>
-                      <span className='font-medium'>
-                        ₦
-                        {formatCurrency(
-                          userType === 'salary'
-                            ? salaryCalculations.consolidatedRelief
-                            : creatorCalculations.consolidatedRelief
                         )}
                       </span>
                     </div>
@@ -926,15 +911,11 @@ export default function TaxEstimator() {
                           />
                         </svg>
                       </div>
-                      <h4 className='font-bold text-green-700'>Automatic Reliefs</h4>
+                      <h4 className='font-bold text-green-700'>Automatic Reliefs (NTA 2025)</h4>
                     </div>
                     <ul className='space-y-2'>
                       {[
                         { title: 'Basic Relief', desc: 'Higher of 1% of gross income or ₦350,000' },
-                        {
-                          title: '20% Consolidated Relief',
-                          desc: '20% of your gross annual income',
-                        },
                       ].map((item, i) => (
                         <li key={i} className='flex items-start gap-3 p-3 bg-green-50 rounded-lg'>
                           <span className='text-green-500'>✓</span>
@@ -975,7 +956,10 @@ export default function TaxEstimator() {
                         },
                         { title: 'National Housing Fund (NHF)', desc: '2.5% of basic salary' },
                         { title: 'NHIS', desc: 'Health insurance contributions' },
-                        { title: 'Rent Deduction', desc: 'Up to ₦300,000 per year' },
+                        {
+                          title: 'Rent Deduction',
+                          desc: 'Lower of ₦500,000 or 20% of annual rent (NTA 2025)',
+                        },
                       ].map((item, i) => (
                         <li key={i} className='flex items-start gap-3 p-3 bg-gray-50 rounded-lg'>
                           <span className='text-primary-blue'>+</span>
@@ -1074,17 +1058,11 @@ export default function TaxEstimator() {
                           />
                         </svg>
                       </div>
-                      <h4 className='font-bold text-primary-dark'>
-                        Automatic Reliefs (Also Applied)
-                      </h4>
+                      <h4 className='font-bold text-primary-dark'>Automatic Reliefs (NTA 2025)</h4>
                     </div>
                     <ul className='space-y-2'>
                       {[
                         { title: 'Basic Relief', desc: 'Higher of 1% of gross income or ₦350,000' },
-                        {
-                          title: '20% Consolidated Relief',
-                          desc: '20% of your gross annual income',
-                        },
                       ].map((item, i) => (
                         <li key={i} className='flex items-start gap-3 p-3 bg-gray-50 rounded-lg'>
                           <span className='text-primary-blue'>✓</span>
