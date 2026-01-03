@@ -626,7 +626,8 @@ export default function TaxEstimator() {
                     </button>
                   </div>
                   <p className='text-xl font-bold text-green-600'>
-                    -₦{formatCurrency(
+                    -₦
+                    {formatCurrency(
                       userType === 'salary'
                         ? salaryCalculations.totalReliefs
                         : creatorCalculations.totalDeductions
@@ -685,7 +686,10 @@ export default function TaxEstimator() {
                         )}
                         {salaryCalculations.rentRelief > 0 && (
                           <div className='flex justify-between text-sm'>
-                            <span className='text-text-gray'>Rent Relief (20% of ₦{formatCurrency(salaryCalculations.annualRentPaid)})</span>
+                            <span className='text-text-gray'>
+                              Rent Relief (20% of ₦
+                              {formatCurrency(salaryCalculations.annualRentPaid)})
+                            </span>
                             <span className='font-medium'>
                               ₦{formatCurrency(salaryCalculations.rentRelief)}
                             </span>
