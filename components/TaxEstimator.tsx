@@ -78,10 +78,7 @@ export default function TaxEstimator() {
     // Step 1: Gross Annual Income
     const grossIncome = basic + housing + transport + other;
 
-    // Step 2: Calculate Reliefs
-    // Basic Relief: MAX(1% of gross, ₦350,000)
-    const basicRelief = Math.max(grossIncome * 0.01, 350000);
-
+    // Step 2: Calculate Reliefs (NTA 2025 - Basic Relief removed)
     // Pension (max 8% of gross)
     const pension = Math.min(grossIncome * (pensionRate / 100), grossIncome * 0.08);
 
@@ -91,12 +88,13 @@ export default function TaxEstimator() {
     // NHIS
     const nhis = parseAmount(nhisAmount) * multiplier;
 
-    // Rent Deduction - NTA 2025: Lower of ₦500,000 or 20% of annual rent paid
-    const annualRentPaid = parseAmount(rentDeduction) * multiplier;
-    const rent = Math.min(annualRentPaid * 0.2, 500000, annualRentPaid);
+    // Rent Deduction - NTA 2025: 20% of annual rent paid, capped at ₦500,000
+    // Note: Rent is always entered as annual amount in Nigeria
+    const annualRentPaid = parseAmount(rentDeduction);
+    const rentRelief = Math.min(annualRentPaid * 0.2, 500000);
 
-    // Total Reliefs (NTA 2025 - Consolidated Relief replaced by Rent Deduction)
-    const totalReliefs = basicRelief + pension + nhf + nhis + rent;
+    // Total Reliefs (NTA 2025 - No Basic Relief, No Consolidated Relief)
+    const totalReliefs = pension + nhf + nhis + rentRelief;
 
     // Step 3: Taxable Income
     const taxableIncome = Math.max(0, grossIncome - totalReliefs);
@@ -111,11 +109,10 @@ export default function TaxEstimator() {
 
     return {
       grossIncome,
-      basicRelief,
       pension,
       nhf,
       nhis,
-      rent,
+      rentRelief,
       annualRentPaid,
       totalReliefs,
       taxableIncome,
@@ -143,12 +140,8 @@ export default function TaxEstimator() {
     const expenses = parseAmount(businessExpenses) * multiplier;
 
     // For creators: Simple calculation - gross minus business expenses
-    // Basic Relief: MAX(1% of gross, ₦350,000)
-    const basicRelief = Math.max(gross * 0.01, 350000);
-
-    // Total deductions (reliefs + business expenses) - NTA 2025
-    const totalReliefs = basicRelief;
-    const totalDeductions = totalReliefs + expenses;
+    // NTA 2025: No Basic Relief or Consolidated Relief
+    const totalDeductions = expenses;
 
     // Taxable Income
     const taxableIncome = Math.max(0, gross - totalDeductions);
@@ -164,8 +157,6 @@ export default function TaxEstimator() {
     return {
       grossIncome: gross,
       businessExpenses: expenses,
-      basicRelief,
-      totalReliefs,
       totalDeductions,
       taxableIncome,
       annualTax,
@@ -517,7 +508,7 @@ export default function TaxEstimator() {
                       <label
                         htmlFor='rent'
                         className='block text-sm font-medium text-text-gray mb-2'>
-                        Rent Deduction ({incomeType === 'monthly' ? 'Monthly' : 'Annual'})
+                        Annual Rent Paid
                       </label>
                       <div className='relative'>
                         <span className='absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-text-gray'>
@@ -533,7 +524,7 @@ export default function TaxEstimator() {
                         />
                       </div>
                       <p className='text-xs text-text-gray mt-1'>
-                        NTA 2025: Lower of ₦500,000 or 20% of rent
+                        Relief = 20% of rent, max ₦500,000
                       </p>
                     </div>
                   </div>
@@ -635,7 +626,11 @@ export default function TaxEstimator() {
                     </button>
                   </div>
                   <p className='text-xl font-bold text-green-600'>
-                    -₦{formatCurrency(calc.totalReliefs)}
+                    -₦{formatCurrency(
+                      userType === 'salary'
+                        ? salaryCalculations.totalReliefs
+                        : creatorCalculations.totalDeductions
+                    )}
                   </p>
                   <p className='text-xs text-text-gray'>/year</p>
                 </div>
@@ -664,17 +659,6 @@ export default function TaxEstimator() {
                 <div className='bg-white rounded-2xl p-4 mb-6 shadow-sm'>
                   <h4 className='font-bold text-primary-dark mb-3'>Reliefs Breakdown (Annual)</h4>
                   <div className='space-y-2'>
-                    <div className='flex justify-between text-sm'>
-                      <span className='text-text-gray'>Basic Relief (1% or ₦350k)</span>
-                      <span className='font-medium'>
-                        ₦
-                        {formatCurrency(
-                          userType === 'salary'
-                            ? salaryCalculations.basicRelief
-                            : creatorCalculations.basicRelief
-                        )}
-                      </span>
-                    </div>
                     {userType === 'salary' && (
                       <>
                         <div className='flex justify-between text-sm'>
@@ -699,11 +683,11 @@ export default function TaxEstimator() {
                             </span>
                           </div>
                         )}
-                        {salaryCalculations.rent > 0 && (
+                        {salaryCalculations.rentRelief > 0 && (
                           <div className='flex justify-between text-sm'>
-                            <span className='text-text-gray'>Rent Deduction</span>
+                            <span className='text-text-gray'>Rent Relief (20% of ₦{formatCurrency(salaryCalculations.annualRentPaid)})</span>
                             <span className='font-medium'>
-                              ₦{formatCurrency(salaryCalculations.rent)}
+                              ₦{formatCurrency(salaryCalculations.rentRelief)}
                             </span>
                           </div>
                         )}
@@ -892,7 +876,7 @@ export default function TaxEstimator() {
             <div className='px-6 py-5 space-y-6'>
               {userType === 'salary' ? (
                 <>
-                  {/* Salary Earner Reliefs */}
+                  {/* Salary Earner Reliefs - NTA 2025 */}
                   <div>
                     <div className='flex items-center gap-2 mb-3'>
                       <div className='w-6 h-6 rounded-full bg-green-100 flex items-center justify-center'>
@@ -911,42 +895,7 @@ export default function TaxEstimator() {
                           />
                         </svg>
                       </div>
-                      <h4 className='font-bold text-green-700'>Automatic Reliefs (NTA 2025)</h4>
-                    </div>
-                    <ul className='space-y-2'>
-                      {[
-                        { title: 'Basic Relief', desc: 'Higher of 1% of gross income or ₦350,000' },
-                      ].map((item, i) => (
-                        <li key={i} className='flex items-start gap-3 p-3 bg-green-50 rounded-lg'>
-                          <span className='text-green-500'>✓</span>
-                          <div>
-                            <p className='font-medium text-primary-dark text-sm'>{item.title}</p>
-                            <p className='text-xs text-text-gray'>{item.desc}</p>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Other Deductions */}
-                  <div>
-                    <div className='flex items-center gap-2 mb-3'>
-                      <div className='w-6 h-6 rounded-full bg-primary-blue/10 flex items-center justify-center'>
-                        <svg
-                          width='12'
-                          height='12'
-                          viewBox='0 0 24 24'
-                          fill='none'
-                          className='text-primary-blue'>
-                          <path
-                            d='M12 6v12M6 12h12'
-                            stroke='currentColor'
-                            strokeWidth='3'
-                            strokeLinecap='round'
-                          />
-                        </svg>
-                      </div>
-                      <h4 className='font-bold text-primary-dark'>Additional Deductions</h4>
+                      <h4 className='font-bold text-green-700'>Allowed Deductions (NTA 2025)</h4>
                     </div>
                     <ul className='space-y-2'>
                       {[
@@ -957,12 +906,12 @@ export default function TaxEstimator() {
                         { title: 'National Housing Fund (NHF)', desc: '2.5% of basic salary' },
                         { title: 'NHIS', desc: 'Health insurance contributions' },
                         {
-                          title: 'Rent Deduction',
-                          desc: 'Lower of ₦500,000 or 20% of annual rent (NTA 2025)',
+                          title: 'Rent Relief',
+                          desc: '20% of annual rent paid, capped at ₦500,000',
                         },
                       ].map((item, i) => (
-                        <li key={i} className='flex items-start gap-3 p-3 bg-gray-50 rounded-lg'>
-                          <span className='text-primary-blue'>+</span>
+                        <li key={i} className='flex items-start gap-3 p-3 bg-green-50 rounded-lg'>
+                          <span className='text-green-500'>✓</span>
                           <div>
                             <p className='font-medium text-primary-dark text-sm'>{item.title}</p>
                             <p className='text-xs text-text-gray'>{item.desc}</p>
@@ -1030,42 +979,6 @@ export default function TaxEstimator() {
                       ].map((item, i) => (
                         <li key={i} className='flex items-start gap-3 p-3 bg-green-50 rounded-lg'>
                           <span className='text-lg'>{item.icon}</span>
-                          <div>
-                            <p className='font-medium text-primary-dark text-sm'>{item.title}</p>
-                            <p className='text-xs text-text-gray'>{item.desc}</p>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Automatic Reliefs for Creators */}
-                  <div>
-                    <div className='flex items-center gap-2 mb-3'>
-                      <div className='w-6 h-6 rounded-full bg-primary-blue/10 flex items-center justify-center'>
-                        <svg
-                          width='12'
-                          height='12'
-                          viewBox='0 0 24 24'
-                          fill='none'
-                          className='text-primary-blue'>
-                          <path
-                            d='M5 13L9 17L19 7'
-                            stroke='currentColor'
-                            strokeWidth='3'
-                            strokeLinecap='round'
-                            strokeLinejoin='round'
-                          />
-                        </svg>
-                      </div>
-                      <h4 className='font-bold text-primary-dark'>Automatic Reliefs (NTA 2025)</h4>
-                    </div>
-                    <ul className='space-y-2'>
-                      {[
-                        { title: 'Basic Relief', desc: 'Higher of 1% of gross income or ₦350,000' },
-                      ].map((item, i) => (
-                        <li key={i} className='flex items-start gap-3 p-3 bg-gray-50 rounded-lg'>
-                          <span className='text-primary-blue'>✓</span>
                           <div>
                             <p className='font-medium text-primary-dark text-sm'>{item.title}</p>
                             <p className='text-xs text-text-gray'>{item.desc}</p>
