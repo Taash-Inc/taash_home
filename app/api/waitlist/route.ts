@@ -81,6 +81,68 @@ async function addToLoops(data: {
   }
 }
 
+// Store failed Loops sync in Supabase for retry
+async function storeFailedLoopsSync(data: {
+  email: string;
+  firstName: string;
+  lastName: string;
+  profession: string;
+  monthlyIncome: string | null;
+  errorMessage: string;
+}): Promise<void> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('Supabase not configured, cannot store failed sync');
+    return;
+  }
+
+  try {
+    await fetch(`${supabaseUrl}/rest/v1/failed_loops_syncs`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: supabaseKey,
+        Authorization: `Bearer ${supabaseKey}`,
+      },
+      body: JSON.stringify({
+        email: data.email,
+        first_name: data.firstName,
+        last_name: data.lastName,
+        profession: data.profession,
+        monthly_income: data.monthlyIncome,
+        error_message: data.errorMessage,
+        retry_count: 0,
+      }),
+    });
+  } catch (error) {
+    console.error('Failed to store failed Loops sync:', error);
+  }
+}
+
+// Send Slack notification for failed Loops sync
+async function sendSlackAlert(data: { email: string; errorMessage: string }): Promise<void> {
+  const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+
+  if (!webhookUrl) {
+    console.warn('Slack webhook not configured, skipping alert');
+    return;
+  }
+
+  try {
+    await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: `⚠️ *Loops Sync Failed*\n• Email: ${data.email}\n• Error: ${data.errorMessage}\n• Stored for retry in \`failed_loops_syncs\` table`,
+      }),
+    });
+  } catch (error) {
+    console.error('Failed to send Slack alert:', error);
+  }
+}
+
 // Insert into Supabase using REST API
 async function insertToSupabase(data: {
   full_name: string;
@@ -187,14 +249,41 @@ export async function POST(request: NextRequest) {
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
 
-    // Fire and forget - don't wait for Loops to complete
-    addToLoops({
+    // Try to add to Loops, store failure if it fails
+    const loopsData = {
       email: sanitizedData.email,
       firstName,
       lastName,
       profession: sanitizedData.profession,
       monthlyIncome: sanitizedData.monthlyIncome,
-    }).catch((err) => console.error('Loops background error:', err));
+    };
+
+    addToLoops(loopsData)
+      .then(async (result) => {
+        if (!result.success && result.error) {
+          // Store failure for retry
+          await storeFailedLoopsSync({
+            ...loopsData,
+            errorMessage: result.error,
+          });
+          // Send Slack notification
+          await sendSlackAlert({
+            email: loopsData.email,
+            errorMessage: result.error,
+          });
+        }
+      })
+      .catch(async (err) => {
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        await storeFailedLoopsSync({
+          ...loopsData,
+          errorMessage,
+        });
+        await sendSlackAlert({
+          email: loopsData.email,
+          errorMessage,
+        });
+      });
 
     return NextResponse.json(
       { message: 'Successfully joined the waitlist!', data },
