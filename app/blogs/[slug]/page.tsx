@@ -209,7 +209,7 @@ export default async function BlogPostPage({ params }: PageProps) {
               Ready to simplify your taxes?
             </h3>
             <p className='text-text-gray mb-4'>
-              Join thousands of African freelancers using Taash to track income and estimate taxes.
+              Join thousands of Nigerian freelancers using Taash to track income and estimate taxes.
             </p>
             <Link
               href='/#waitlist'
