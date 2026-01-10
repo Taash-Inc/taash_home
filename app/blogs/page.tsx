@@ -16,7 +16,7 @@ const gradients = [
 export const metadata = {
   title: 'Blog - Taash',
   description:
-    'Tax tips, guides, and resources for freelancers and creators in Africa. Learn how to manage your taxes the easy way.',
+    'Tax tips, guides, and resources for freelancers and creators in Nigeria. Learn how to manage your taxes the easy way.',
 };
 
 export default async function BlogPage() {
@@ -31,7 +31,7 @@ export default async function BlogPage() {
           <div className='text-center mb-12'>
             <h1 className='text-4xl md:text-5xl font-bold text-primary-dark mb-4'>Taash Blog</h1>
             <p className='text-text-gray text-lg max-w-2xl mx-auto'>
-              Tax tips, guides, and resources for freelancers and creators in Africa.
+              Tax tips, guides, and resources for freelancers and creators in Nigeria.
             </p>
           </div>
 

@@ -46,7 +46,7 @@ export async function getLatestPosts(limit = 3): Promise<SanityPost[]> {
       mainImage,
       publishedAt
     }`,
-    { limit: limit - 1 }
+    { limit }
   );
 }
 
