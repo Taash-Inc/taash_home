@@ -163,16 +163,49 @@ export default async function BlogPostPage({ params }: PageProps) {
 
           {/* Header */}
           <header className='mb-8'>
-            <h1 className='text-3xl md:text-4xl font-bold text-primary-dark mb-4'>{post.title}</h1>
-            {post.publishedAt && (
-              <time className='text-text-light-gray'>
-                {new Date(post.publishedAt).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              </time>
+            {/* Categories */}
+            {post.categories && post.categories.length > 0 && (
+              <div className='flex flex-wrap gap-2 mb-4'>
+                {post.categories.map((category) => (
+                  <span
+                    key={category._id}
+                    className='text-xs font-medium text-primary-blue bg-primary-blue/10 px-3 py-1 rounded-full'>
+                    {category.title}
+                  </span>
+                ))}
+              </div>
             )}
+
+            <h1 className='text-3xl md:text-4xl font-bold text-primary-dark mb-4'>{post.title}</h1>
+
+            {/* Author and Date */}
+            <div className='flex items-center gap-4'>
+              {post.author && (
+                <div className='flex items-center gap-3'>
+                  {post.author.image && (
+                    <div className='relative w-10 h-10 rounded-full overflow-hidden'>
+                      <Image
+                        src={urlFor(post.author.image).width(80).height(80).url()}
+                        alt={post.author.name}
+                        fill
+                        className='object-cover'
+                      />
+                    </div>
+                  )}
+                  <span className='text-text-gray font-medium'>{post.author.name}</span>
+                </div>
+              )}
+              {post.author && post.publishedAt && <span className='text-text-light-gray'>•</span>}
+              {post.publishedAt && (
+                <time className='text-text-light-gray'>
+                  {new Date(post.publishedAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </time>
+              )}
+            </div>
           </header>
 
           {/* Featured Image */}

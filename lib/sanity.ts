@@ -17,6 +17,23 @@ export function urlFor(source: SanityImageSource) {
 }
 
 // Types for blog posts
+export interface SanityAuthor {
+  _id: string;
+  name: string;
+  slug?: { current: string };
+  image?: {
+    asset: { _ref: string };
+  };
+  bio?: string;
+}
+
+export interface SanityCategory {
+  _id: string;
+  title: string;
+  slug?: { current: string };
+  description?: string;
+}
+
 export interface SanityPost {
   _id: string;
   title: string;
@@ -33,6 +50,8 @@ export interface SanityPost {
   publishedAt?: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   body?: any[];
+  author?: SanityAuthor;
+  categories?: SanityCategory[];
 }
 
 // Fetch latest blog posts
@@ -44,7 +63,9 @@ export async function getLatestPosts(limit = 3): Promise<SanityPost[]> {
       slug,
       excerpt,
       mainImage,
-      publishedAt
+      publishedAt,
+      author->{_id, name, slug, image},
+      categories[]->{_id, title, slug}
     }`,
     { limit }
   );
@@ -60,7 +81,9 @@ export async function getPostBySlug(slug: string): Promise<SanityPost | null> {
       excerpt,
       mainImage,
       publishedAt,
-      body
+      body,
+      author->{_id, name, slug, image, bio},
+      categories[]->{_id, title, slug, description}
     }`,
     { slug }
   );
