@@ -17,21 +17,35 @@ interface BlogCarouselProps {
 
 export default function BlogCarousel({ posts, gradients }: BlogCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
 
+  // Detect mobile screen
   useEffect(() => {
-    // TODO: Change back to 3 after testing
-    if (posts.length <= 3) return;
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Auto-rotate carousel
+  useEffect(() => {
+    // On mobile: activate carousel with 2+ posts
+    // On desktop: activate carousel with 4+ posts
+    const minPostsForCarousel = isMobile ? 2 : 4;
+    if (posts.length < minPostsForCarousel) return;
 
     const interval = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % posts.length);
-    }, 5000); // Change slide every 4 seconds (includes pause)
+    }, 5000);
 
     return () => clearInterval(interval);
-  }, [posts.length]);
+  }, [posts.length, isMobile]);
 
-  // TODO: Change back to 3 after testing
-  // If 2 or fewer posts, show static grid
-  if (posts.length <= 3) {
+  // On mobile: show carousel with 2+ posts
+  // On desktop: show grid with 3 or fewer posts
+  const showCarousel = isMobile ? posts.length >= 2 : posts.length > 3;
+
+  if (!showCarousel) {
     return (
       <div className='grid md:grid-cols-3 gap-6 mb-12'>
         {posts.map((post, index) => (
@@ -41,11 +55,14 @@ export default function BlogCarousel({ posts, gradients }: BlogCarouselProps) {
     );
   }
 
-  // Create extended array for seamless looping - duplicate posts at the end
+  // Create extended array for seamless looping
   const extendedPosts = [...posts, ...posts.slice(0, 3)];
 
-  // Width for exactly 3 cards: 3 * 350px + 2 * 24px gap = 1098px
-  const containerWidth = 3 * 350 + 2 * 24;
+  // Card width and gap - smaller on mobile
+  const cardWidth = isMobile ? 300 : 350;
+  const gap = 24;
+  const visibleCards = isMobile ? 1 : 3;
+  const containerWidth = visibleCards * cardWidth + (visibleCards - 1) * gap;
 
   return (
     <div className='mb-12'>
@@ -55,10 +72,13 @@ export default function BlogCarousel({ posts, gradients }: BlogCarouselProps) {
           <div
             className='flex gap-6 transition-transform duration-1000 ease-in-out'
             style={{
-              transform: `translateX(-${currentIndex * (350 + 24)}px)`,
+              transform: `translateX(-${currentIndex * (cardWidth + gap)}px)`,
             }}>
             {extendedPosts.map((post, index) => (
-              <div key={`${post._id}-${index}`} className='flex-shrink-0 w-[350px]'>
+              <div
+                key={`${post._id}-${index}`}
+                className='flex-shrink-0'
+                style={{ width: `${cardWidth}px` }}>
                 <BlogCard post={post} index={index} gradients={gradients} />
               </div>
             ))}
