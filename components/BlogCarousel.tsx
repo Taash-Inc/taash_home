@@ -143,6 +143,14 @@ function BlogCard({
               <rect x='35' y='58' width='30' height='3' rx='1' fill='#cbd5e1' />
             </svg>
           )}
+          {/* Category badge */}
+          {post.categories && post.categories.length > 0 && (
+            <div className='absolute top-3 left-3'>
+              <span className='text-xs font-medium text-white bg-primary-blue/90 px-2.5 py-1 rounded-full'>
+                {post.categories[0].title}
+              </span>
+            </div>
+          )}
         </div>
         <div className='p-6'>
           <h3 className='text-lg font-semibold text-primary-dark mb-2 line-clamp-2'>
@@ -151,15 +159,20 @@ function BlogCard({
           <p className='text-text-gray text-sm mb-4 line-clamp-2'>
             {post.excerpt || 'Read more about this topic...'}
           </p>
-          <span className='text-xs text-text-light-gray'>
-            {post.publishedAt
-              ? new Date(post.publishedAt).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric',
-                })
-              : '5 min read'}
-          </span>
+          <div className='flex items-center justify-between'>
+            <span className='text-xs text-text-light-gray'>
+              {post.publishedAt
+                ? new Date(post.publishedAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                  })
+                : '5 min read'}
+            </span>
+            {post.author && (
+              <span className='text-xs text-text-gray font-medium'>{post.author.name}</span>
+            )}
+          </div>
         </div>
       </article>
     </Link>
