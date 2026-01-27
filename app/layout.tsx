@@ -24,7 +24,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 // Base URL for the site
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://taash.africa';
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.taash.tax';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
