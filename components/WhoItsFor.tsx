@@ -54,7 +54,7 @@ export default function WhoItsFor() {
         {/* Header */}
         <div className='text-center mb-12'>
           <h2 className='text-3xl md:text-4xl font-bold text-primary-dark mb-4'>
-            Built for the New African Workforce
+            Built for the New Nigerian Workforce
           </h2>
           <p className='text-text-gray text-lg max-w-2xl mx-auto'>
             Whether you&apos;re freelancing, creating content, or running a small business — Taash

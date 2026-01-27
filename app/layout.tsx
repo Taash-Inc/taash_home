@@ -29,11 +29,11 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.taash.tax';
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: 'Taash - Effortless Tax & Finance for African Freelancers',
+    default: 'Taash - Effortless Tax & Finance for Nigerian Freelancers',
     template: '%s | Taash',
   },
   description:
-    'AI-powered platform helping African freelancers, creators, and small businesses track expenses, estimate taxes, and save smarter. Join the waitlist for early access.',
+    'AI-powered platform helping Nigerian freelancers, creators, and small businesses track expenses, estimate taxes, and save smarter. Join the waitlist for early access.',
   keywords: [
     'tax software Africa',
     'freelancer tax calculator',
@@ -64,23 +64,23 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: siteUrl,
     siteName: 'Taash',
-    title: 'Taash - Effortless Tax & Finance for African Freelancers',
+    title: 'Taash - Effortless Tax & Finance for Nigerian Freelancers',
     description:
-      'AI-powered platform helping African freelancers, creators, and small businesses track expenses, estimate taxes, and save smarter.',
+      'AI-powered platform helping Nigerian freelancers, creators, and small businesses track expenses, estimate taxes, and save smarter.',
     images: [
       {
         url: '/og-image.png?v=2',
         width: 1200,
         height: 630,
-        alt: 'Taash - Tax & Finance for African Freelancers',
+        alt: 'Taash - Tax & Finance for Nigerian Freelancers',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Taash - Effortless Tax & Finance for African Freelancers',
+    title: 'Taash - Effortless Tax & Finance for Nigerian Freelancers',
     description:
-      'AI-powered platform helping African freelancers track expenses, estimate taxes, and save smarter.',
+      'AI-powered platform helping Nigerian freelancers track expenses, estimate taxes, and save smarter.',
     images: ['/og-image.png'],
     creator: '@taaborafrica',
   },

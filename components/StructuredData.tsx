@@ -6,7 +6,7 @@ export function OrganizationSchema() {
     url: 'https://taash.africa',
     logo: 'https://taash.africa/logo.png',
     description:
-      'AI-powered platform helping African freelancers, creators, and small businesses track expenses, estimate taxes, and save smarter.',
+      'AI-powered platform helping Nigerian freelancers, creators, and small businesses track expenses, estimate taxes, and save smarter.',
     foundingDate: '2024',
     founders: [
       {
@@ -41,7 +41,7 @@ export function WebsiteSchema() {
     name: 'Taash',
     url: 'https://taash.africa',
     description:
-      'AI-powered tax and finance platform for African freelancers, creators, and small businesses.',
+      'AI-powered tax and finance platform for Nigerian freelancers, creators, and small businesses.',
     potentialAction: {
       '@type': 'SearchAction',
       target: 'https://taash.africa/search?q={search_term_string}',
@@ -65,7 +65,7 @@ export function SoftwareApplicationSchema() {
     applicationCategory: 'FinanceApplication',
     operatingSystem: 'Web',
     description:
-      'AI-powered tax estimation and expense tracking for African freelancers and small businesses.',
+      'AI-powered tax estimation and expense tracking for Nigerian freelancers and small businesses.',
     offers: {
       '@type': 'Offer',
       price: '0',
@@ -106,7 +106,7 @@ export function FAQSchema() {
         name: 'What is Taash?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Taash is an AI-powered platform that helps African freelancers, creators, and small businesses track expenses, estimate taxes, and save smarter.',
+          text: 'Taash is an AI-powered platform that helps Nigerian freelancers, creators, and small businesses track expenses, estimate taxes, and save smarter.',
         },
       },
       {
