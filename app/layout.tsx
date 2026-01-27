@@ -69,7 +69,7 @@ export const metadata: Metadata = {
       'AI-powered platform helping African freelancers, creators, and small businesses track expenses, estimate taxes, and save smarter.',
     images: [
       {
-        url: '/og-image.png',
+        url: '/og-image.png?v=2',
         width: 1200,
         height: 630,
         alt: 'Taash - Tax & Finance for African Freelancers',
