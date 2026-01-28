@@ -81,7 +81,7 @@ export const metadata: Metadata = {
     title: 'Taash - Effortless Tax & Finance for Nigerian Freelancers',
     description:
       'AI-powered platform helping Nigerian freelancers track expenses, estimate taxes, and save smarter.',
-    images: ['/og-image.png'],
+    images: ['/og-image.png?v=2'],
     creator: '@taaborafrica',
   },
   robots: {
