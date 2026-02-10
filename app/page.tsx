@@ -9,6 +9,9 @@ import TaxEstimator from '@/components/TaxEstimator';
 import WaitlistForm from '@/components/WaitlistForm';
 import WhoItsFor from '@/components/WhoItsFor';
 
+// Revalidate every 60 seconds — page is served from edge CDN between revalidations
+export const revalidate = 60;
+
 export default function Home() {
   return (
     <>
