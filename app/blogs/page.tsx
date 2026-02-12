@@ -13,8 +13,8 @@ const gradients = [
   'from-purple-100 to-violet-50',
 ];
 
-// Revalidate every 60 seconds — page is served from edge CDN between revalidations
-export const revalidate = 60;
+// Revalidate every hour — blog listing doesn't change frequently
+export const revalidate = 3600;
 
 export const metadata = {
   title: 'Blog - Taash',
