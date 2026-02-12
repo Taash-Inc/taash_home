@@ -67,7 +67,13 @@ export async function getLatestPosts(limit = 3): Promise<SanityPost[]> {
       author->{_id, name, slug, image},
       categories[]->{_id, title, slug}
     }`,
-    { limit }
+    { limit },
+    {
+      next: {
+        revalidate: 3600, // Cache Sanity response for 1 hour
+        tags: ['posts'],
+      },
+    }
   );
 }
 
@@ -85,7 +91,13 @@ export async function getPostBySlug(slug: string): Promise<SanityPost | null> {
       author->{_id, name, slug, image, bio},
       categories[]->{_id, title, slug, description}
     }`,
-    { slug }
+    { slug },
+    {
+      next: {
+        revalidate: 3600,
+        tags: ['posts', `post-${slug}`],
+      },
+    }
   );
 }
 

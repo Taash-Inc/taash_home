@@ -1,4 +1,4 @@
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { NextRequest, NextResponse } from 'next/server';
 
 // Secret to validate webhook requests from Sanity
@@ -20,6 +20,12 @@ export async function POST(request: NextRequest) {
 
     // Only revalidate for post changes
     if (_type === 'post') {
+      // Revalidate cached Sanity fetch responses by tag
+      revalidateTag('posts', 'max');
+      if (slug?.current) {
+        revalidateTag(`post-${slug.current}`, 'max');
+      }
+
       // Revalidate the blog listing page
       revalidatePath('/blogs');
 
