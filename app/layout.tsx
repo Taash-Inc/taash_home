@@ -119,6 +119,10 @@ export default function RootLayout({
   return (
     <html lang='en'>
       <head>
+        <meta
+          name='google-site-verification'
+          content='1EUjadppSWLxbtcm8HTr8DAimEDTLikT65JsIexrdAU'
+        />
         <link rel='icon' href='/favicon.ico?v=2' sizes='any' />
         <link rel='icon' href='/icon.svg?v=2' type='image/svg+xml' />
         <link rel='apple-touch-icon' href='/apple-touch-icon.png' />
