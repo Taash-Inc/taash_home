@@ -3,8 +3,8 @@ export function OrganizationSchema() {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: 'Taash Technologies Inc.',
-    url: 'https://taash.africa',
-    logo: 'https://taash.africa/logo.png',
+    url: 'https://www.taash.tax',
+    logo: 'https://www.taash.tax/logo.png',
     description:
       'AI-powered platform helping Nigerian freelancers, creators, and small businesses track expenses, estimate taxes, and save smarter.',
     foundingDate: '2024',
@@ -18,7 +18,13 @@ export function OrganizationSchema() {
       '@type': 'PostalAddress',
       addressCountry: 'NG',
     },
-    sameAs: ['https://twitter.com/taaborafrica', 'https://linkedin.com/company/taash'],
+    sameAs: [
+      'https://x.com/taashapp',
+      'https://www.linkedin.com/company/taash-technologies-inc/',
+      'https://www.instagram.com/taashapp/',
+      'https://www.facebook.com/profile.php?id=61585718545111',
+      'https://www.youtube.com/@taashapp',
+    ],
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'customer service',
@@ -39,12 +45,12 @@ export function WebsiteSchema() {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: 'Taash',
-    url: 'https://taash.africa',
+    url: 'https://www.taash.tax',
     description:
       'AI-powered tax and finance platform for Nigerian freelancers, creators, and small businesses.',
     potentialAction: {
       '@type': 'SearchAction',
-      target: 'https://taash.africa/search?q={search_term_string}',
+      target: 'https://www.taash.tax/search?q={search_term_string}',
       'query-input': 'required name=search_term_string',
     },
   };
@@ -161,7 +167,7 @@ export function BreadcrumbSchema() {
         '@type': 'ListItem',
         position: 1,
         name: 'Home',
-        item: 'https://taash.africa',
+        item: 'https://www.taash.tax',
       },
     ],
   };

@@ -56,10 +56,9 @@ export const metadata: Metadata = {
   publisher: 'Taash Technologies Inc.',
   icons: {
     icon: [
-      { url: '/favicon.ico?v=2', sizes: 'any' },
-      { url: '/icon.svg?v=2', type: 'image/svg+xml' },
+      { url: '/favicon.ico?v=2', sizes: '48x48', type: 'image/x-icon' },
+      { url: '/icon.svg?v=2', type: 'image/svg+xml', sizes: 'any' },
     ],
-    apple: '/apple-touch-icon.png',
   },
   formatDetection: {
     email: false,
@@ -130,9 +129,6 @@ export default function RootLayout({
           name='google-site-verification'
           content='1EUjadppSWLxbtcm8HTr8DAimEDTLikT65JsIexrdAU'
         />
-        <link rel='icon' href='/favicon.ico?v=2' sizes='any' />
-        <link rel='icon' href='/icon.svg?v=2' type='image/svg+xml' />
-        <link rel='apple-touch-icon' href='/apple-touch-icon.png' />
         <link rel='manifest' href='/manifest.json' />
         {/* JSON-LD Structured Data for SEO */}
         <OrganizationSchema />
