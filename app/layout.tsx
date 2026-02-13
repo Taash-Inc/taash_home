@@ -54,6 +54,13 @@ export const metadata: Metadata = {
   authors: [{ name: 'Taash Technologies Inc.' }],
   creator: 'Taash Technologies Inc.',
   publisher: 'Taash Technologies Inc.',
+  icons: {
+    icon: [
+      { url: '/favicon.ico?v=2', sizes: 'any' },
+      { url: '/icon.svg?v=2', type: 'image/svg+xml' },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
   formatDetection: {
     email: false,
     address: false,
