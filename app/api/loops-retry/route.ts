@@ -55,8 +55,21 @@ async function addToLoops(data: {
   }
 }
 
+// Shape of a row in the `failed_loops_syncs` table, per the fields read below.
+type FailedSync = {
+  // PostgREST returns a bigint id as a JSON number and a uuid as a string; accept both and
+  // coerce at the call sites, which build URL query strings.
+  id: string | number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  profession: string;
+  monthly_income: string | null;
+  retry_count?: number | null;
+};
+
 // Get failed syncs from Supabase
-async function getFailedSyncs(): Promise<{ data: any[]; error?: string }> {
+async function getFailedSyncs(): Promise<{ data: FailedSync[]; error?: string }> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
 
@@ -228,13 +241,13 @@ export async function GET(request: NextRequest) {
 
     if (loopsResult.success) {
       // Delete from failed_loops_syncs on success
-      await updateSyncRecord(sync.id, true);
+      await updateSyncRecord(String(sync.id), true);
       results.succeeded++;
     } else {
       // Update retry count
       const newRetryCount = (sync.retry_count || 0) + 1;
       await incrementRetryCount(
-        sync.id,
+        String(sync.id),
         sync.retry_count || 0,
         loopsResult.error || 'Unknown error'
       );

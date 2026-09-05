@@ -233,9 +233,8 @@ export default async function BlogPostPage({ params }: PageProps) {
 
           {/* Content */}
           <div className='prose prose-lg max-w-none'>
-            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             {post.body && (
-              <PortableText value={post.body as any} components={portableTextComponents} />
+              <PortableText value={post.body} components={portableTextComponents} />
             )}
           </div>
 
