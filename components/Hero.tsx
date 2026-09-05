@@ -88,12 +88,12 @@ export default function Hero() {
                   <p className='text-xs text-text-gray mb-1'>Expenses This Month</p>
                   <p className='text-xl sm:text-2xl font-bold text-primary-dark'>₦128,400</p>
                 </div>
-                <div className='w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-gradient-to-br from-green-400 to-teal-500 flex-shrink-0'>
+                <div className='relative w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-gradient-to-br from-green-400 to-teal-500 flex-shrink-0'>
                   <Image
                     src='/avatar-small.png'
                     alt='User avatar'
-                    width={40}
-                    height={40}
+                    fill
+                    sizes='40px'
                     className='object-cover'
                   />
                 </div>

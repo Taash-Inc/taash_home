@@ -4,6 +4,7 @@ import Features from '@/components/Features';
 import Footer from '@/components/Footer';
 import Header from '@/components/Header';
 import Hero from '@/components/Hero';
+import HowItWorks from '@/components/HowItWorks';
 import Resources from '@/components/Resources';
 import TaxEstimator from '@/components/TaxEstimator';
 import WaitlistForm from '@/components/WaitlistForm';
@@ -21,7 +22,7 @@ export default function Home() {
         <article>
           <Hero />
           <About />
-          {/* <HowItWorks /> */}
+          <HowItWorks />
           <Features />
           <WhoItsFor />
           <TaxEstimator />
