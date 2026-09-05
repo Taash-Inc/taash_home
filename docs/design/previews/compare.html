@@ -1,0 +1,104 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Taash — Three directions, side by side</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0f172a;--panel:#1e1f23;--rule:#303338;--tx:#f6f7f8;--tx2:#a6abb4;--ac:#3b82f6;
+ --f:'Space Grotesk',ui-sans-serif,system-ui,sans-serif}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--f);-webkit-font-smoothing:antialiased}
+header{padding:28px 28px 0;max-width:1900px;margin:0 auto}
+h1{margin:0 0 6px;font-size:1.5rem;letter-spacing:-.02em}
+p.sub{margin:0 0 22px;color:var(--tx2);font-size:.9375rem;max-width:80ch;line-height:1.55}
+.bar{display:flex;gap:20px;flex-wrap:wrap;align-items:center;padding-bottom:20px;border-bottom:1px solid var(--rule)}
+fieldset{border:0;margin:0;padding:0;display:flex;gap:8px;align-items:center}
+legend{float:left;font-size:.6875rem;letter-spacing:.12em;text-transform:uppercase;color:var(--tx2);margin-right:10px}
+.tab{background:transparent;border:1px solid var(--rule);color:var(--tx2);font:600 .875rem/1 var(--f);
+ padding:10px 16px;border-radius:8px;cursor:pointer;min-height:40px}
+.tab[aria-pressed=true]{background:var(--ac);border-color:var(--ac);color:#fff}
+.grid{display:grid;gap:20px;padding:24px 28px 56px;max-width:1900px;margin:0 auto;
+ grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:1100px){.grid{grid-template-columns:1fr}}
+.col{background:var(--panel);border:1px solid var(--rule);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+.hd{padding:14px 16px;border-bottom:1px solid var(--rule)}
+.hd .n{font-weight:700;font-size:1.0625rem;letter-spacing:-.01em}
+.hd .d{font-size:.8125rem;color:var(--tx2);line-height:1.45;margin-top:3px}
+.hd .sw{display:inline-flex;gap:5px;margin-top:9px}
+.hd .sw i{width:16px;height:16px;border-radius:4px;display:block;border:1px solid rgba(255,255,255,.14)}
+.stage{background:var(--panel);overflow:hidden;position:relative;flex:1;line-height:0}
+
+.stage.mobile{max-width:340px;margin:16px auto;border-radius:14px;
+ border:6px solid #2a2d33;overflow:hidden}
+iframe{border:0;display:block;transform-origin:0 0;background:#fff}
+.foot{padding:11px 16px;border-top:1px solid var(--rule);font-size:.75rem;color:var(--tx2);line-height:1.5}
+.legend{max-width:1900px;margin:0 auto;padding:0 28px 48px;color:var(--tx2);font-size:.8125rem;line-height:1.6}
+.legend b{color:var(--tx)}
+a{color:#76abff}
+</style></head><body>
+
+<header>
+ <h1>Taash — three directions, same two moments</h1>
+ <p class="sub">Live previews, not screenshots. Real copy, real palettes, the real images from <code>public/</code>, and the same worked example throughout: a Lagos freelancer on ₦780,000/month total compensation, ₦2,400,000 annual rent. All figures use the corrected pension base (8% of basic + housing + transport, PRA&nbsp;2014 s.4(1)), so they differ from production by design.</p>
+ <div class="bar">
+  <fieldset><legend>Moment</legend>
+   <button class="tab" id="m-hero" aria-pressed="true">Hero &amp; first fold</button>
+   <button class="tab" id="m-est" aria-pressed="false">Tax estimator · filled</button></fieldset>
+  <fieldset><legend>Width</legend>
+   <button class="tab" id="w-d" aria-pressed="true">Desktop 1440</button>
+   <button class="tab" id="w-m" aria-pressed="false">Mobile 390</button></fieldset>
+ </div>
+</header>
+
+<div class="grid" id="grid"></div>
+
+<p class="legend">
+ <b>Reading the comparison.</b> Ledger puts the answer beside the inputs and sets every figure in JetBrains Mono so the two comparison numbers align digit-for-digit; it is the only direction that ships a dark theme (open <a href="ledger.html">ledger.html</a> and press the moon). Broadsheet removes cards entirely — the calculation is set as a worksheet on warm paper, body in Source Serif 4. Daylight leads with the photography, promotes the brand yellow to a real surface, and pins the answer to the top on mobile.
+ <br><br>
+ <b>Contrast.</b> Every colour in all three is derived in OKLCH from the existing brand hues, and every token's ratio is stated in its direction document. Note that <code>#3b82f6</code> measures 3.68:1 on white and fails AA for body text, which is why light themes use <code>#2c70df</code> or <code>#205ab9</code> for links — and why the brand blue is most itself in Ledger's dark theme, where it measures 4.85:1.
+</p>
+
+<script>
+const DIRS=[
+ {s:'ledger',n:'A · Ledger',d:'Dense financial instrument. Dual-theme, dark-capable. Sticky result rail; monospaced figures.',
+  sw:['#0f172a','#3b82f6','#4a7fa7','#22c55e','#f6f7f8'],
+  f:'Space Grotesk display · JetBrains Mono figures · system sans UI · +0 KB fonts'},
+ {s:'broadsheet',n:'B · Broadsheet',d:'Editorial restraint. Warm paper, zero cards, worksheet calculation, serif body.',
+  sw:['#fcf6ee','#241f17','#205ab9','#00742e','#e7dbcc'],
+  f:'Space Grotesk display · Source Serif 4 body (SIL OFL) · +38 KB fonts'},
+ {s:'daylight',n:'C · Daylight',d:'Warm consumer fintech. Photography-led, mobile-first, stepped flow with a pinned answer.',
+  sw:['#fcf6f2','#0f172a','#ffea66','#2c70df','#00742e'],
+  f:'Space Grotesk throughout · JetBrains Mono in the comparison only · +0 KB fonts'},
+];
+let moment='hero', width='d';
+const W={d:1440,m:390}, H={d:900,m:760};
+function render(){
+ const g=document.getElementById('grid'); g.innerHTML='';
+ for(const dir of DIRS){
+  const col=document.createElement('div'); col.className='col';
+  col.innerHTML=`<div class="hd"><div class="n">${dir.n}</div><div class="d">${dir.d}</div>
+    <div class="sw">${dir.sw.map(c=>`<i style="background:${c}"></i>`).join('')}</div></div>
+   <div class="stage ${width==='d'?'desktop':'mobile'}"></div>
+   <div class="foot">${dir.f}</div>`;
+  g.appendChild(col);
+  const stage=col.querySelector('.stage');
+  const f=document.createElement('iframe');
+  f.src=dir.s+'.html'+(moment==='est'?'#est':'');
+  f.width=W[width]; f.height=H[width]; f.loading='eager'; f.title=dir.n+' preview';
+  stage.appendChild(f);
+  requestAnimationFrame(()=>{const k=stage.clientWidth/W[width];
+   f.style.transform='scale('+k+')'; stage.style.height=Math.floor(H[width]*k)+'px';});
+ }
+}
+function wire(id,fn){document.getElementById(id).onclick=()=>{fn();render();sync()}}
+function sync(){
+ m_hero.setAttribute('aria-pressed',moment==='hero'); m_est.setAttribute('aria-pressed',moment==='est');
+ w_d.setAttribute('aria-pressed',width==='d'); w_m.setAttribute('aria-pressed',width==='m');
+}
+const m_hero=document.getElementById('m-hero'), m_est=document.getElementById('m-est'),
+      w_d=document.getElementById('w-d'), w_m=document.getElementById('w-m');
+wire('m-hero',()=>moment='hero'); wire('m-est',()=>moment='est');
+wire('w-d',()=>width='d'); wire('w-m',()=>width='m');
+render(); sync();
+addEventListener('resize',()=>render());
+</script>
+</body></html>

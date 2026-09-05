@@ -1,0 +1,267 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Taash — Direction C · Daylight</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+ --sand:#fcf6f2;--sand-100:#f5ece6;--sand-200:#e7dbd3;--sand-300:#d4c5bb;
+ --sand-500:#9e8c80;--sand-600:#847368;--sand-700:#6b5d54;--sand-800:#544841;--sand-900:#3a312c;
+ --ink:#0f172a;
+ --blue-500:#3b82f6;--blue-600:#2c70df;--blue-700:#205ab9;
+ --sun:#ffea66;--sun-soft:#fef9c3;
+ --teal-600:#4a7fa7;--teal-700:#386485;
+ --green-700:#00742e;--green-400:#22c55e;--red-600:#d52c29;
+ --surface:var(--sand);--sunken:var(--sand-100);--raised:#fff;
+ --border:var(--sand-200);
+ --text:var(--ink);--text-2:var(--sand-700);--cap:var(--sand-600);
+ --accent:var(--blue-700);--accent-fill:var(--blue-600);--on-accent:#fff;
+ --positive:var(--green-700);--negative:var(--red-600);--focus:var(--blue-600);
+ --r-content:1rem;--r-result:1.5rem;--r-control:.75rem;
+ --sh-content:0 1px 2px rgb(15 23 42/.04);
+ --sh-result:0 2px 4px rgb(15 23 42/.05),0 16px 40px -16px rgb(15 23 42/.18);
+ --fd:'Space Grotesk',ui-sans-serif,system-ui,sans-serif;
+ --fm:'JetBrains Mono',ui-monospace,Menlo,monospace;
+ color-scheme:light;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--surface);color:var(--text);font-family:var(--fd);
+ font-size:17px;line-height:1.58;-webkit-font-smoothing:antialiased}
+img{max-width:100%;display:block}
+h1,h2,h3{margin:0;letter-spacing:-.02em;font-weight:700}
+h1{font-size:clamp(2.875rem,6vw,4rem);line-height:1.06}
+h2{font-size:clamp(1.75rem,3.6vw,2.25rem);line-height:1.14}
+h3{font-size:1.75rem;line-height:1.22;font-weight:600}
+.wrap{max-width:1220px;margin:0 auto;padding:0 24px}
+a{color:var(--accent)}
+:is(a,button,input,[tabindex]):focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.fig{font-variant-numeric:tabular-nums;letter-spacing:-.015em}
+.figm{font-family:var(--fm);font-variant-numeric:tabular-nums slashed-zero}
+
+header{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--sand) 90%,transparent);
+ backdrop-filter:blur(12px)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:60px;gap:24px}
+.brand{font-weight:700;font-size:1.3125rem;letter-spacing:-.03em;display:flex;align-items:center;gap:8px}
+.brand svg{width:22px;height:22px}
+.navlinks{display:none;gap:30px;font-size:.9375rem;font-weight:500}
+@media(min-width:900px){.navlinks{display:flex}}
+.navlinks a{color:var(--text);text-decoration:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:600;font-size:1rem;
+ padding:13px 24px;border-radius:var(--r-result);text-decoration:none;border:2px solid transparent;
+ cursor:pointer;min-height:48px}
+.btn-p{background:var(--accent-fill);color:var(--on-accent)}
+.btn-s{background:transparent;color:var(--text);border-color:var(--sand-300)}
+.btn-sm{padding:10px 18px;font-size:.9375rem;min-height:44px}
+
+.hero{position:relative;overflow:hidden;padding:56px 0 0}
+.hero-g{display:grid;gap:36px;align-items:center}
+@media(min-width:1000px){.hero-g{grid-template-columns:minmax(0,45fr) minmax(0,55fr);gap:0}}
+.hero-copy{padding-bottom:72px;position:relative;z-index:2}
+.chip{display:inline-flex;align-items:center;gap:8px;background:var(--sun);color:var(--ink);
+ font-size:.875rem;font-weight:600;padding:8px 16px;border-radius:999px;margin-bottom:24px}
+.lede{font-size:1.375rem;line-height:1.5;color:var(--text-2);margin:20px 0 30px;max-width:38ch}
+.cta{display:flex;gap:12px;flex-wrap:wrap}
+.proof{display:flex;align-items:center;gap:10px;margin-top:28px;font-size:.9375rem;color:var(--cap)}
+.proof img{width:40px;height:40px;border-radius:999px;object-fit:cover;border:2px solid var(--raised)}
+.hero-art{position:relative;min-height:440px;align-self:stretch}
+@media(min-width:1000px){.hero-art{margin-right:calc(50% - 50vw);min-height:600px}}
+.hero-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:56% 42%;
+ filter:saturate(1.06) contrast(.97) brightness(1.04)}
+.hero-art::after{content:"";position:absolute;inset:0;
+ background:linear-gradient(90deg,var(--sand) 0%,rgba(252,246,242,.55) 22%,rgba(252,246,242,0) 52%)}
+@media(max-width:999px){.hero-art::after{background:linear-gradient(0deg,var(--sand) 0%,rgba(252,246,242,0) 45%)}}
+.float{position:absolute;z-index:3;background:var(--raised);border-radius:var(--r-content);
+ padding:14px 16px;box-shadow:var(--sh-result);right:6%;bottom:14%;min-width:210px}
+.float .l{font-size:.75rem;color:var(--cap);font-weight:600}
+.float .v{font-size:1.625rem;font-weight:700;margin-top:2px}
+.float .t{font-size:.75rem;color:var(--positive);font-weight:600}
+@media(max-width:999px){.float{position:static;margin:-40px 24px 0;right:auto;bottom:auto}}
+
+.est{padding:104px 0 120px;background:var(--sunken)}
+.est-h{text-align:center;max-width:620px;margin:0 auto 44px}
+.est-h .k{display:inline-block;background:var(--sun-soft);color:var(--ink);font-size:.8125rem;
+ font-weight:600;padding:7px 14px;border-radius:999px;margin-bottom:16px}
+.est-h p{color:var(--text-2);margin:12px 0 0;font-size:1.125rem}
+.est-g{display:grid;gap:24px}
+@media(min-width:1000px){.est-g{grid-template-columns:minmax(0,60fr) minmax(0,40fr);gap:32px;align-items:start}}
+
+.steps{display:flex;gap:8px;margin-bottom:20px}
+.step{flex:1;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+.step .bar{height:4px;border-radius:999px;background:var(--sand-300)}
+.step[aria-selected=true] .bar{background:var(--accent-fill)}
+.step .t{font-size:.8125rem;font-weight:600;color:var(--cap);margin-top:8px;display:block}
+.step[aria-selected=true] .t{color:var(--text)}
+.card{background:var(--raised);border-radius:var(--r-content);box-shadow:var(--sh-content);
+ border:1px solid var(--border);padding:24px;margin-bottom:16px}
+.card h3{font-size:1.0625rem;font-weight:700;margin-bottom:4px}
+.card .cap{font-size:.875rem;color:var(--cap);margin:0 0 18px}
+.field{margin-bottom:16px}
+.field:last-child{margin-bottom:0}
+.field label{display:block;font-size:.9375rem;font-weight:500;margin-bottom:7px}
+.field .hint{font-weight:400;color:var(--cap);font-size:.8125rem}
+.ib{display:flex;align-items:center;gap:8px;border:2px solid var(--sand-300);border-radius:var(--r-control);
+ padding:0 16px;background:var(--raised);height:56px}
+.ib:focus-within{border-color:var(--accent-fill)}
+.ib span{color:var(--cap);font-size:1.125rem}
+.ib input{border:0;outline:0;background:transparent;color:var(--text);width:100%;
+ font-variant-numeric:tabular-nums;font-size:1.25rem;font-weight:600;font-family:var(--fd)}
+.pick{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pick button{background:var(--raised);border:2px solid var(--sand-300);border-radius:var(--r-control);
+ padding:16px 14px;text-align:left;cursor:pointer;font-family:inherit;min-height:64px}
+.pick button[aria-pressed=true]{border-color:var(--accent-fill);background:#f4f8ff}
+.pick .n{display:block;font-weight:600;font-size:1rem}
+.pick .d{display:block;font-size:.8125rem;color:var(--cap);margin-top:2px}
+.rowc{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;
+ border-bottom:1px solid var(--border)}
+.rowc:last-child{border-bottom:0}
+.rowc .k{font-size:.9375rem;font-weight:500}
+.rowc .k small{display:block;font-weight:400;color:var(--cap);font-size:.8125rem}
+.rng{display:flex;align-items:center;gap:12px}
+.rng input{accent-color:var(--accent-fill);width:120px;height:24px}
+.rng b{font-variant-numeric:tabular-nums;font-size:.9375rem}
+.sw{width:52px;height:30px;border-radius:999px;background:var(--accent-fill);border:0;position:relative;cursor:pointer}
+.sw::after{content:"";position:absolute;top:3px;left:25px;width:24px;height:24px;border-radius:999px;background:#fff}
+.warn{background:var(--sun-soft);color:var(--ink);font-size:.8125rem;padding:9px 12px;
+ border-radius:var(--r-control);margin-top:10px}
+
+.answer{background:var(--raised);border-radius:var(--r-result);box-shadow:var(--sh-result);padding:28px}
+@media(min-width:1000px){.answer{position:sticky;top:84px}}
+.answer .l{font-size:.8125rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--cap)}
+.answer .big{font-size:clamp(3rem,8vw,4rem);font-weight:700;line-height:1;letter-spacing:-.035em;
+ font-variant-numeric:tabular-nums;margin:12px 0 6px}
+.answer .sub{color:var(--text-2);font-size:1rem}
+.hr{height:1px;background:var(--border);margin:22px 0}
+.ln{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:7px 0;font-size:.9375rem}
+.ln .k{color:var(--text-2)}
+.ln .v{font-variant-numeric:tabular-nums;font-weight:600}
+.ln.keep .v{font-size:1.375rem;color:var(--positive)}
+.disc{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--border);
+ padding:14px 0;font:600 .9375rem/1.4 var(--fd);color:var(--text);cursor:pointer}
+.disc::before{content:"▾ ";color:var(--cap)}
+.cmp{font-size:.9375rem;color:var(--text-2);padding-bottom:14px}
+.cmp p{margin:0 0 7px}
+.cmp b{color:var(--text)}
+.cmp .mono{font-family:var(--fm);font-variant-numeric:tabular-nums;font-size:.875rem;color:var(--text)}
+.cmp .note{font-size:.8125rem;color:var(--cap);font-style:italic}
+.legal{font-size:.75rem;color:var(--cap);line-height:1.5;margin:16px 0 18px}
+.handoff{display:block;text-align:center;background:var(--accent-fill);color:#fff;border-radius:var(--r-result);
+ padding:16px;font-weight:600;text-decoration:none;font-size:1rem;min-height:48px}
+.pinned{display:none}
+@media(max-width:999px){
+ .pinned{display:block;position:sticky;top:60px;z-index:40;background:var(--raised);
+  border-radius:var(--r-result);box-shadow:var(--sh-result);padding:16px 20px;margin-bottom:20px}
+ .pinned .l{font-size:.75rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--cap)}
+ .pinned .v{font-size:2.25rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.05}
+ .pinned .s{font-size:.875rem;color:var(--text-2)}
+}
+.note{max-width:1220px;margin:0 auto;padding:22px 24px;font-size:.8125rem;color:var(--cap)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style></head><body>
+
+<header><div class="wrap nav">
+ <div class="brand"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 7l9 5 9-5-9-5-9 5z" fill="#4a7fa7"/><path d="M3 12l9 5 9-5M3 17l9 5 9-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Taash</div>
+ <nav class="navlinks"><a href="#">About</a><a href="#">Features</a><a href="#">Who It's For</a><a href="#">Resources</a></nav>
+ <a class="btn btn-p btn-sm" href="#">Join Waitlist</a>
+</div></header>
+
+<section class="hero"><div class="wrap hero-g">
+ <div class="hero-copy">
+  <div class="chip">✦ Made for Nigerian Freelancers</div>
+  <h1>Effortless Tax and Finance for Nigeria's New Workforce</h1>
+  <p class="lede">Taash turns daily income and spending into clear records that are always tax-ready. Built for freelancers, workers, creators, and small businesses in Nigeria.</p>
+  <div class="cta"><a class="btn btn-p" href="#">Join Waitlist</a><a class="btn btn-s" href="#est">Try Tax Estimator</a></div>
+  <div class="proof"><img src="../../../public/avatar-small.png" alt="">Built with freelancers in Lagos, Abuja and Port Harcourt</div>
+ </div>
+ <div class="hero-art">
+  <img src="../../../public/hero-image.png" alt="A Nigerian freelancer working on a laptop">
+  <div class="float">
+   <div class="l">Example · tax this month</div>
+   <div class="v fig">₦101,147</div>
+   <div class="t">You keep ₦598,003</div>
+  </div>
+ </div>
+</div></section>
+
+<section class="est" id="est"><div class="wrap">
+ <div class="est-h">
+  <span class="k">Nigeria Tax Act 2025 · in force 1 Jan 2026</span>
+  <h2>PAYE Tax Calculator</h2>
+  <p>Three short steps. Your number appears as soon as you start.</p>
+ </div>
+ <div class="est-g">
+  <div>
+   <div class="pinned"><div class="l">You'll owe</div><div class="v fig">₦101,147</div><div class="s">a month · ₦1,213,764 a year</div></div>
+   <div class="steps" role="tablist" aria-label="Steps">
+    <button class="step" role="tab" aria-selected="false"><span class="bar"></span><span class="t">1 · You</span></button>
+    <button class="step" role="tab" aria-selected="true"><span class="bar"></span><span class="t">2 · What you earn</span></button>
+    <button class="step" role="tab" aria-selected="false"><span class="bar"></span><span class="t">3 · What you claim</span></button>
+   </div>
+
+   <div class="card">
+    <h3>Who you are</h3>
+    <p class="cap">This changes which reliefs apply.</p>
+    <div class="pick" style="margin-bottom:14px">
+     <button aria-pressed="true"><span class="n">Salary earner</span><span class="d">You're on a payroll</span></button>
+     <button aria-pressed="false"><span class="n">Creator / Self-employed</span><span class="d">You invoice clients</span></button>
+    </div>
+    <div class="pick">
+     <button aria-pressed="true"><span class="n">Monthly</span><span class="d">Enter monthly figures</span></button>
+     <button aria-pressed="false"><span class="n">Annual</span><span class="d">Enter yearly figures</span></button>
+    </div>
+   </div>
+
+   <div class="card">
+    <h3>What you earn</h3>
+    <p class="cap">Monthly, before any deductions.</p>
+    <div class="field"><label for="c1">Basic salary</label><div class="ib"><span>₦</span><input id="c1" value="450,000" inputmode="numeric"></div></div>
+    <div class="field"><label for="c2">Housing allowance</label><div class="ib"><span>₦</span><input id="c2" value="180,000" inputmode="numeric"></div></div>
+    <div class="field"><label for="c3">Transport allowance</label><div class="ib"><span>₦</span><input id="c3" value="90,000" inputmode="numeric"></div></div>
+    <div class="field"><label for="c4">Other allowances <span class="hint">— medical, bonus, etc.</span></label><div class="ib"><span>₦</span><input id="c4" value="60,000" inputmode="numeric"></div></div>
+   </div>
+
+   <div class="card">
+    <h3>What you can claim</h3>
+    <p class="cap">These lower your tax. <a href="#">What can I claim?</a></p>
+    <div class="rowc"><span class="k">Pension<small>8% of basic + housing + transport</small></span>
+     <span class="rng"><input type="range" min="0" max="20" value="8" aria-label="Pension rate" aria-valuetext="8 percent, ₦691,200"><b>8%</b></span></div>
+    <div class="rowc"><span class="k" id="nhfl">National Housing Fund<small>2.5% of basic · ₦135,000/yr</small></span>
+     <button class="sw" role="switch" aria-checked="true" aria-labelledby="nhfl"></button></div>
+    <div class="rowc"><span class="k">NHIS<small>Monthly contribution</small></span>
+     <div class="ib" style="width:170px;height:48px"><span>₦</span><input value="12,000" inputmode="numeric" aria-label="NHIS monthly"></div></div>
+    <div class="rowc" style="display:block">
+     <div style="display:flex;justify-content:space-between;align-items:center;gap:16px">
+      <span class="k">Annual rent paid<small>Relief = 20% of rent, max ₦500,000</small></span>
+      <div class="ib" style="width:190px;height:48px"><span>₦</span><input value="2,400,000" inputmode="numeric" aria-label="Annual rent paid"></div></div>
+     <div class="warn">Relief is capped at ₦500,000 — rent above ₦2,500,000 won't increase it.</div>
+    </div>
+   </div>
+  </div>
+
+  <aside class="answer" aria-label="Your result">
+   <div class="l">You'll owe in 2026</div>
+   <div class="big fig">₦101,147</div>
+   <div class="sub">a month · <span class="fig">₦1,213,764</span> a year</div>
+   <div class="hr"></div>
+   <div class="ln keep"><span class="k">You keep</span><span class="v">₦598,003<span style="font-size:.8125rem;color:var(--cap);font-weight:400">/mo</span></span></div>
+   <div class="ln"><span class="k">Effective rate</span><span class="v">13.0%</span></div>
+   <div class="hr"></div>
+   <div class="ln"><span class="k">Gross</span><span class="v">₦9,360,000</span></div>
+   <div class="ln"><span class="k">Reliefs</span><span class="v" style="color:var(--positive)">−₦1,450,200</span></div>
+   <div class="ln"><span class="k">Taxable</span><span class="v">₦7,909,800</span></div>
+   <div style="height:10px"></div>
+   <button class="disc" aria-expanded="false">Reliefs breakdown</button>
+   <button class="disc" aria-expanded="true">Compared with the old rules</button>
+   <div class="cmp">
+    <p>Before 2026 you'd have paid <span class="mono">₦1,308,272</span>.</p>
+    <p>Under the Nigeria Tax Act you pay <span class="mono">₦1,213,764</span> — <b style="color:var(--positive)">₦94,508 less</b>.</p>
+    <p class="note">The old rules no longer apply; this is for context.</p>
+   </div>
+   <button class="disc" aria-expanded="false" style="border-bottom:1px solid var(--border)">The 2026 tax bands</button>
+   <p class="legal">Estimate only, not tax advice. Calculated under the Nigeria Tax Act 2025 (in force 1 January 2026). Employment and self-employment income only. Figures as at 4 September 2026.</p>
+   <a class="handoff" href="#">Keep this up to date — join the waitlist</a>
+  </aside>
+ </div>
+</div></section>
+
+<p class="note"><b>Direction C · Daylight</b> — standalone preview. Photography is warm-graded and full-bleed; the yellow is promoted to a real surface. Figures use the corrected pension base (8% of basic + housing + transport, PRA 2014 s.4(1)).</p>
+</body></html>

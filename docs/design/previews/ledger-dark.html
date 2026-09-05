@@ -1,0 +1,417 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Taash — Dark estimator band, dramatic hero, motion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+ --blue-100:#e1eeff;--blue-200:#c7deff;--blue-300:#a5c8ff;--blue-400:#76abff;
+ --blue-500:#3b82f6;--blue-600:#2c70df;--blue-700:#205ab9;--blue-950:#061d44;
+ --teal-400:#82b1d6;--teal-500:#5f95be;--teal-600:#4a7fa7;--teal-700:#386485;
+ --green-400:#22c55e;--green-700:#00742e;--red-500:#f7463f;--red-600:#d52c29;
+ --amber:#ffea66;--amber-100:#f8f0bb;
+ --ink-50:#f6f7f8;--ink-100:#ebedf0;--ink-200:#dadce1;--ink-300:#c3c7ce;--ink-400:#a6abb4;
+ --ink-500:#8a8f99;--ink-600:#717680;--ink-700:#5c6068;--ink-900:#303338;--ink-950:#1e1f23;--ink:#0f172a;
+ --fd:'Space Grotesk',ui-sans-serif,system-ui,sans-serif;
+ --fm:'JetBrains Mono',ui-monospace,Menlo,monospace;
+ --fs:ui-sans-serif,system-ui,-apple-system,sans-serif;
+ --dur:1;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:#fff;color:var(--ink);font-family:var(--fs);font-size:16px;line-height:1.6;
+ -webkit-font-smoothing:antialiased;overflow-x:hidden}
+img{max-width:100%;display:block}
+h1,h2,h3{font-family:var(--fd);margin:0;letter-spacing:-.022em}
+h1{font-size:clamp(2.5rem,5.2vw,3.5rem);line-height:1.08;font-weight:700}
+h2{font-size:clamp(1.75rem,3.2vw,2rem);line-height:1.15;font-weight:700}
+.fig{font-family:var(--fm);font-variant-numeric:tabular-nums slashed-zero;letter-spacing:-.01em}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+:is(a,button,input,[tabindex]):focus-visible{outline:2px solid var(--blue-500);outline-offset:2px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--fs);
+ font-weight:600;font-size:.9375rem;padding:12px 20px;border-radius:8px;border:1px solid transparent;
+ cursor:pointer;text-decoration:none;min-height:44px}
+.btn-d{background:var(--ink);color:#fff}
+.btn-b{background:var(--blue-600);color:#fff}
+.btn-s{background:#fff;color:var(--ink);border-color:var(--ink-200)}
+
+/* ── preview chrome (not part of the design) ── */
+#chrome{position:fixed;inset:auto 0 0 0;z-index:200;background:#0b0e14;color:#e5e7eb;
+ border-top:1px solid #23262e;padding:10px 16px;display:flex;gap:18px;flex-wrap:wrap;align-items:center;
+ font:500 .8125rem/1 var(--fs)}
+#chrome .g{display:flex;gap:6px;align-items:center}
+#chrome .lb{color:#8b93a1;font-size:.6875rem;letter-spacing:.1em;text-transform:uppercase;margin-right:4px}
+#chrome button{background:#161a22;border:1px solid #2b303a;color:#c9d1dc;border-radius:7px;
+ padding:8px 12px;cursor:pointer;font:600 .8125rem/1 var(--fs);min-height:36px}
+#chrome button[aria-pressed=true]{background:var(--blue-600);border-color:var(--blue-600);color:#fff}
+body{padding-bottom:64px}
+
+/* ── header ── */
+header{position:sticky;top:0;z-index:60;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);
+ border-bottom:1px solid var(--ink-100)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:64px;gap:24px}
+.brand{font-family:var(--fd);font-weight:700;font-size:1.25rem;letter-spacing:-.03em;display:flex;align-items:center;gap:8px}
+.brand svg{width:22px;height:22px}
+.navlinks{display:none;gap:28px;font-size:.9375rem}
+@media(min-width:900px){.navlinks{display:flex}}
+.navlinks a{color:var(--ink);text-decoration:none;font-weight:500}
+
+/* ── HERO ── */
+.hero{padding:72px 0 96px;position:relative;overflow:hidden;background:#f8fafc}
+.hero-g{display:grid;gap:48px;align-items:center}
+@media(min-width:980px){.hero-g{grid-template-columns:1fr 1fr;gap:56px}}
+.badge{display:inline-flex;align-items:center;gap:8px;background:#C5E2FF;color:var(--ink);
+ padding:8px 16px;border-radius:999px;font-size:.875rem;font-weight:600;margin-bottom:22px}
+.lede{font-size:1.125rem;line-height:1.6;color:var(--ink-700);margin:20px 0 28px;max-width:44ch}
+.cta{display:flex;gap:12px;flex-wrap:wrap}
+
+/* the circle stage */
+.stage{position:relative;display:grid;place-items:center;min-height:520px}
+.orb{position:relative;border-radius:50%;overflow:hidden;isolation:isolate}
+.orb img{width:100%;height:100%;object-fit:cover;object-position:64% 52%;transform:scale(1.42);
+ filter:contrast(1.07) saturate(1.1)}
+.orb::before{content:"";position:absolute;inset:0;z-index:2;border-radius:inherit;pointer-events:none;
+ box-shadow:inset 0 0 0 1px rgba(255,255,255,.5),inset 0 22px 60px -30px rgba(255,255,255,.75),
+            inset 0 -30px 70px -40px rgba(15,23,42,.55)}
+.orb::after{content:"";position:absolute;inset:0;z-index:1;
+ background:linear-gradient(180deg,rgba(163,211,255,.92) 0%,rgba(163,211,255,.10) 42%,rgba(255,234,102,.14) 72%,rgba(255,234,102,.85) 100%);
+ mix-blend-mode:multiply}
+
+/* v1 — CURRENT (as production) */
+.v1 .orb{width:min(560px,86vw);aspect-ratio:1.44/1;border-radius:50%}
+.v1 .orb::after{background:linear-gradient(180deg,#A3D3FF 0%,#FFEA66 100%);mix-blend-mode:normal;opacity:.55}
+.v1 .ring,.v1 .halo,.v1 .arcs,.v1 .earcs,.v1 .grid,.v1 .orbit{display:none}
+
+/* v2 — HALO: rotating conic ring + glow + orbiting nodes */
+.v2 .orb{width:min(460px,80vw);aspect-ratio:1/1}
+.v2 .halo{position:absolute;width:min(600px,96vw);aspect-ratio:1/1;border-radius:50%;
+ background:radial-gradient(circle,rgba(59,130,246,.22) 0%,rgba(74,127,167,.10) 45%,transparent 68%);filter:blur(14px)}
+.v2 .ring{position:absolute;width:min(538px,90vw);aspect-ratio:1/1;border-radius:50%;
+ background:conic-gradient(from 0deg,transparent 0deg,rgba(59,130,246,.15) 30deg,var(--blue-500) 78deg,var(--teal-600) 132deg,rgba(74,127,167,.12) 178deg,transparent 210deg,transparent 360deg);
+ -webkit-mask:radial-gradient(circle,transparent 0 calc(50% - 3px),#000 calc(50% - 3px) 50%,transparent 50%);
+         mask:radial-gradient(circle,transparent 0 calc(50% - 3px),#000 calc(50% - 3px) 50%,transparent 50%);
+ animation:spin calc(22s / var(--dur)) linear infinite}
+.v2 .ring.r2{width:min(614px,96vw);opacity:.9;animation-duration:calc(34s / var(--dur));animation-direction:reverse;
+ background:conic-gradient(from 140deg,transparent 0deg,rgba(255,234,102,.2) 20deg,#f4d848 56deg,rgba(255,234,102,.15) 96deg,transparent 130deg,transparent 360deg);
+ -webkit-mask:radial-gradient(circle,transparent 0 calc(50% - 2px),#000 calc(50% - 2px) 50%,transparent 50%);
+         mask:radial-gradient(circle,transparent 0 calc(50% - 2px),#000 calc(50% - 2px) 50%,transparent 50%)}
+.v2 .orb::after{background:linear-gradient(180deg,rgba(59,130,246,.34) 0%,rgba(163,211,255,.10) 44%,rgba(255,234,102,.34) 100%);mix-blend-mode:normal}
+.v2 .orbit{position:absolute;width:min(538px,90vw);aspect-ratio:1/1;animation:spin calc(22s / var(--dur)) linear infinite}
+.v2 .orbit i{position:absolute;top:-5px;left:50%;width:10px;height:10px;border-radius:50%;
+ background:var(--blue-500);box-shadow:0 0 14px 3px rgba(59,130,246,.55);transform:translateX(-50%)}
+.v2 .arcs,.v2 .earcs,.v2 .grid{display:none}
+
+/* v3 — APERTURE: oversized, cropped, technical arcs + grid */
+.v3{--pull:0px}
+.v3 .stage{min-height:560px}
+.v3 .orb{width:min(700px,120vw);aspect-ratio:1/1;transform:translateX(8%)}
+.v3 .orb::after{background:linear-gradient(196deg,rgba(32,90,185,.42) 0%,rgba(163,211,255,.12) 34%,transparent 56%,rgba(255,234,102,.34) 100%);mix-blend-mode:normal}
+.v3 .grid{position:absolute;inset:-10%;z-index:-1;
+ background-image:linear-gradient(rgba(15,23,42,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(15,23,42,.07) 1px,transparent 1px);
+ background-size:34px 34px;
+ -webkit-mask:radial-gradient(circle at 58% 50%,#000 0%,transparent 66%);mask:radial-gradient(circle at 58% 50%,#000 0%,transparent 66%)}
+.earcs{display:none}
+.v3 .arcs{position:absolute;width:min(860px,140vw);aspect-ratio:1/1;transform:translateX(8%);pointer-events:none}
+.v3 .arcs circle{fill:none;stroke:var(--teal-600);stroke-opacity:.5;stroke-width:1.25;
+ stroke-dasharray:var(--dash);stroke-dashoffset:var(--dash);animation:draw calc(1.6s / var(--dur)) var(--d,0s) cubic-bezier(.22,1,.36,1) forwards}
+.v3 .arcs circle.dashed{stroke-dasharray:3 9;stroke-dashoffset:0;animation:spin calc(60s / var(--dur)) linear infinite;transform-origin:50% 50%}
+.v3 .halo{position:absolute;width:min(760px,124vw);aspect-ratio:1/1;border-radius:50%;transform:translateX(8%);
+ background:radial-gradient(circle,rgba(59,130,246,.16) 0%,transparent 62%);filter:blur(20px)}
+.v3 .ring,.v3 .orbit,.v3 .earcs{display:none}
+
+
+/* v4 — APERTURE (ELLIPSE): production's ellipse, oversized + technical arcs */
+.v4 .stage{min-height:560px}
+.v4 .orb{width:clamp(340px,46vw,840px);aspect-ratio:1.44/1;border-radius:50%;transform:translateX(7%)}
+.v4 .orb img{object-position:64% 52%;transform:scale(1.42)}
+.v4 .orb::after{background:linear-gradient(198deg,rgba(59,130,246,.34) 0%,rgba(163,211,255,.16) 32%,transparent 54%,rgba(255,234,102,.40) 100%);mix-blend-mode:normal}
+.v4 .grid{position:absolute;inset:-12%;z-index:-1;
+ background-image:linear-gradient(rgba(15,23,42,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(15,23,42,.07) 1px,transparent 1px);
+ background-size:34px 34px;
+ -webkit-mask:radial-gradient(ellipse 60% 46% at 56% 50%,#000 0%,transparent 72%);
+         mask:radial-gradient(ellipse 60% 46% at 56% 50%,#000 0%,transparent 72%)}
+.v4 .halo{position:absolute;width:clamp(440px,60vw,1100px);aspect-ratio:1.44/1;border-radius:50%;transform:translateX(7%);
+ background:radial-gradient(ellipse,rgba(59,130,246,.17) 0%,transparent 64%);filter:blur(20px)}
+.v4 .earcs{position:absolute;width:clamp(480px,65vw,1180px);aspect-ratio:1.44/1;transform:translateX(7%);pointer-events:none;display:block}
+.v4 .earcs ellipse{fill:none;stroke:var(--teal-600);stroke-opacity:.5;stroke-width:1.25;vector-effect:non-scaling-stroke}
+.v4 .earcs .draw{stroke-dasharray:var(--p);stroke-dashoffset:var(--p);
+ animation:draw calc(1.7s / var(--dur)) var(--d,0s) cubic-bezier(.22,1,.36,1) forwards}
+.v4 .earcs .march{stroke-dasharray:4 11;stroke-opacity:.62;
+ animation:march calc(2.6s / var(--dur)) linear infinite}
+.v4 .ring,.v4 .orbit,.v4 .arcs{display:none}
+@keyframes march{to{stroke-dashoffset:-15}}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes draw{to{stroke-dashoffset:0}}
+
+/* floating cards */
+.fcard{position:absolute;z-index:6;background:#fff;border-radius:14px;padding:12px 14px;
+ box-shadow:0 1px 2px rgba(15,23,42,.05),0 18px 40px -18px rgba(15,23,42,.35);min-width:186px;
+ transition:transform .5s cubic-bezier(.22,1,.36,1)}
+.fcard .l{font-size:.6875rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-600);font-weight:700}
+.fcard .v{font-size:1.5rem;font-weight:700;margin-top:3px}
+.fcard .d{font-size:.75rem;color:var(--green-700);font-weight:600;margin-top:2px}
+.f1{top:12%;left:-2%}
+.f2{bottom:14%;right:-2%;display:flex;align-items:center;gap:10px}
+.f2 img{width:38px;height:38px;border-radius:999px;object-fit:cover}
+@media(max-width:700px){.f1{left:0;top:2%}.f2{right:0;bottom:2%}.fcard{min-width:0;padding:10px 12px}.fcard .v{font-size:1.125rem}}
+
+/* ── DARK ESTIMATOR BAND ── */
+.est{background:var(--ink);color:var(--ink-50);padding:112px 0;position:relative;overflow:hidden}
+.est::before{content:"";position:absolute;inset:0;pointer-events:none;
+ background:radial-gradient(900px 420px at 78% 0%,rgba(59,130,246,.16),transparent 62%),
+            radial-gradient(700px 380px at 8% 100%,rgba(74,127,167,.14),transparent 60%)}
+.est::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+ background-image:linear-gradient(rgba(255,255,255,.032) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.032) 1px,transparent 1px);
+ background-size:40px 40px;
+ -webkit-mask:linear-gradient(180deg,#000,transparent 55%);mask:linear-gradient(180deg,#000,transparent 55%)}
+.est .wrap{position:relative;z-index:2}
+.est-head{max-width:660px;margin-bottom:40px}
+.tag{display:inline-flex;align-items:center;gap:8px;font-size:.75rem;font-weight:700;letter-spacing:.06em;
+ text-transform:uppercase;color:var(--teal-400);background:rgba(74,127,167,.14);
+ border:1px solid rgba(130,177,214,.28);padding:6px 12px;border-radius:6px;margin-bottom:16px}
+.est h2{color:#fff}
+.est-head p{color:var(--ink-300);font-size:1.125rem;margin:12px 0 0}
+.est-g{display:grid;gap:24px}
+@media(min-width:1000px){.est-g{grid-template-columns:58fr 42fr;gap:28px;align-items:start}}
+.pane{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:24px;
+ backdrop-filter:blur(6px)}
+.seg{display:flex;border:1px solid rgba(255,255,255,.14);border-radius:9px;overflow:hidden;margin-bottom:12px}
+.seg button{flex:1;background:transparent;border:0;padding:12px 8px;font:600 .875rem/1 var(--fs);
+ color:var(--ink-400);cursor:pointer;min-height:44px;transition:background .18s,color .18s}
+.seg button[aria-pressed=true]{background:var(--blue-600);color:#fff}
+.glab{font-size:.6875rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-500);
+ margin:26px 0 8px;display:flex;justify-content:space-between;align-items:center}
+.glab button{background:none;border:0;font:600 .75rem/1 var(--fs);color:var(--blue-400);cursor:pointer;
+ text-transform:none;letter-spacing:0;padding:6px}
+.frow{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:11px 0;
+ border-bottom:1px solid rgba(255,255,255,.075)}
+.frow:last-child{border-bottom:0}
+.frow label{font-size:.9375rem;color:var(--ink-300)}
+.frow .sub{display:block;font-size:.75rem;color:var(--ink-500);margin-top:2px}
+.inp{display:flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.18);border-radius:8px;
+ padding:8px 12px;background:rgba(0,0,0,.28);min-width:154px;transition:border-color .18s,box-shadow .18s}
+.inp:focus-within{border-color:var(--blue-500);box-shadow:0 0 0 3px rgba(59,130,246,.22)}
+.inp span{color:var(--ink-500)}
+.inp input{border:0;outline:0;background:transparent;color:#fff;width:100%;text-align:right;
+ font-family:var(--fm);font-variant-numeric:tabular-nums;font-size:.9375rem;font-weight:500}
+.sl{display:flex;align-items:center;gap:12px;min-width:154px}
+.sl input{flex:1;accent-color:var(--blue-500)}
+.sw{width:46px;height:26px;border-radius:999px;background:var(--blue-600);border:0;position:relative;cursor:pointer;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:23px;width:20px;height:20px;border-radius:999px;background:#fff}
+.warn{background:rgba(255,234,102,.12);border:1px solid rgba(255,234,102,.26);color:var(--amber-100);
+ font-size:.75rem;padding:7px 10px;border-radius:6px;margin-top:8px}
+
+.rail{background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.03));
+ border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:26px;position:relative;overflow:hidden}
+.rail::before{content:"";position:absolute;inset:-1px;border-radius:18px;pointer-events:none;
+ background:linear-gradient(140deg,rgba(59,130,246,.55),transparent 42%);
+ -webkit-mask:linear-gradient(#000,#000) content-box,linear-gradient(#000,#000);
+ -webkit-mask-composite:xor;mask-composite:exclude;padding:1px}
+@media(min-width:1000px){.rail{position:sticky;top:88px}}
+.rail .lab{font-size:.6875rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-400)}
+.answer{font-family:var(--fm);font-variant-numeric:tabular-nums;font-size:clamp(2.5rem,6.4vw,3.5rem);
+ font-weight:700;line-height:1;letter-spacing:-.03em;margin:10px 0 6px;color:#fff;display:flex;align-items:baseline}
+.answer .cur{color:var(--ink-300);margin-right:3px;font-weight:500}
+.roll{display:inline-block;overflow:hidden;height:1em;line-height:1}
+.roll i{display:block;font-style:normal;transition:transform calc(.55s / var(--dur)) cubic-bezier(.22,1,.36,1)}
+.asub{font-size:.9375rem;color:var(--ink-300)}
+.hr{height:1px;background:rgba(255,255,255,.1);margin:20px 0}
+.ln{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:6px 0;font-size:.875rem}
+.ln .k{color:var(--ink-400)}
+.ln .v{font-family:var(--fm);font-variant-numeric:tabular-nums;font-weight:500;color:var(--ink-100)}
+.ln.big .v{font-size:1.25rem;font-weight:700;color:var(--green-400)}
+.disc{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid rgba(255,255,255,.1);
+ padding:12px 0;font:600 .875rem/1.4 var(--fs);color:var(--ink-300);cursor:pointer}
+.disc::before{content:"▸ ";color:var(--ink-500)}
+.cmp{padding:14px;background:rgba(0,0,0,.26);border-radius:10px;margin-top:10px}
+.cmpr{margin-bottom:12px}
+.cmpr .t{display:flex;justify-content:space-between;font-size:.8125rem;margin-bottom:5px;color:var(--ink-400)}
+.cmpr .t b{font-family:var(--fm);font-variant-numeric:tabular-nums;color:#fff;font-weight:600}
+.bar{height:9px;border-radius:3px;background:rgba(255,255,255,.09);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:3px;transform-origin:0 50%;
+ animation:grow calc(.9s / var(--dur)) cubic-bezier(.22,1,.36,1) both}
+@keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.delta{font-size:.875rem;font-weight:600;color:var(--green-400);text-align:center;padding-top:2px}
+.legal{font-size:.75rem;color:var(--ink-500);line-height:1.5;margin:16px 0}
+.handoff{display:block;text-align:center;background:var(--blue-600);color:#fff;border-radius:10px;
+ padding:14px;font-weight:600;text-decoration:none;font-size:.9375rem;min-height:44px;
+ transition:transform .2s cubic-bezier(.22,1,.36,1),box-shadow .2s}
+.handoff:hover{transform:translateY(-1px);box-shadow:0 10px 26px -10px rgba(59,130,246,.7)}
+
+/* scroll reveal */
+.rv{opacity:0;transform:translateY(18px);transition:opacity calc(.7s / var(--dur)) ease,transform calc(.7s / var(--dur)) cubic-bezier(.22,1,.36,1)}
+.rv.in{opacity:1;transform:none}
+.after{padding:96px 0;background:#fff}
+.after h2{margin-bottom:10px}
+.after p{color:var(--ink-700);max-width:56ch}
+
+html.nomotion *,html.nomotion *::before,html.nomotion *::after{
+ animation:none!important;transition:none!important}
+html.nomotion .rv{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;
+  transition-duration:.001ms!important}
+ .rv{opacity:1;transform:none}
+}
+</style></head><body class="v4">
+
+<header><div class="wrap nav">
+ <div class="brand"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 7l9 5 9-5-9-5-9 5z" fill="#4a7fa7"/><path d="M3 12l9 5 9-5M3 17l9 5 9-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Taash</div>
+ <nav class="navlinks"><a href="#">About</a><a href="#">Features</a><a href="#">Who It's For</a><a href="#">Resources</a></nav>
+ <a class="btn btn-d" href="#">Join Waitlist</a>
+</div></header>
+
+<section class="hero"><div class="wrap hero-g">
+ <div class="rv">
+  <div class="badge">◍ Made for Nigerian Freelancers</div>
+  <h1>Effortless Tax and Finance for Nigeria's New Workforce</h1>
+  <p class="lede">Taash turns daily income and spending into clear records that are always tax-ready. Built for freelancers, workers, creators, and small businesses in Nigeria.</p>
+  <div class="cta"><a class="btn btn-d" href="#">Join Waitlist</a><a class="btn btn-s" href="#est">Try Tax Estimator</a></div>
+ </div>
+ <div class="stage" id="stage">
+  <div class="halo"></div>
+  <svg class="earcs" viewBox="0 0 720 500" aria-hidden="true" preserveAspectRatio="xMidYMid meet">
+   <ellipse cx="360" cy="250" rx="356" ry="247" class="draw" style="--p:1920;--d:.15s"/>
+   <ellipse cx="360" cy="250" rx="318" ry="221" class="draw" style="--p:1720;--d:.32s"/>
+   <ellipse cx="360" cy="250" rx="284" ry="197" class="march"/>
+  </svg>
+  <svg class="arcs" viewBox="0 0 400 400" aria-hidden="true">
+   <circle cx="200" cy="200" r="196" style="--dash:1232;--d:.15s"/>
+   <circle cx="200" cy="200" r="168" style="--dash:1056;--d:.3s"/>
+   <circle cx="200" cy="200" r="140" class="dashed"/>
+  </svg>
+  <div class="grid"></div>
+  <div class="ring r2"></div>
+  <div class="ring"></div>
+  <div class="orbit"><i></i></div>
+  <div class="orb"><img src="../../../public/hero-image.png" alt="A Nigerian freelancer working on a laptop"></div>
+  <div class="fcard f1" data-p="1.6"><div class="l">Monthly tax estimate</div><div class="v fig">₦101,147</div><div class="d">↑ 12.9% effective rate</div></div>
+  <div class="fcard f2" data-p="-1.2"><div><div class="l">Expenses this month</div><div class="v fig">₦128,400</div></div><img src="../../../public/avatar-small.png" alt=""></div>
+ </div>
+</div></section>
+
+<section class="est" id="est"><div class="wrap">
+ <div class="est-head rv">
+  <div class="tag">Nigeria Tax Act 2025 · in force 1 Jan 2026</div>
+  <h2>PAYE Tax Calculator</h2>
+  <p>Enter what you earn. We'll show what you owe under the 2026 rules as you type.</p>
+ </div>
+ <div class="est-g">
+  <div class="pane rv">
+   <div class="seg" role="group" aria-label="I am a"><button aria-pressed="true">Salary earner</button><button aria-pressed="false">Creator / Self-employed</button></div>
+   <div class="seg" role="group" aria-label="Figures are"><button aria-pressed="true">Monthly</button><button aria-pressed="false">Annual</button></div>
+   <div class="glab">Income</div>
+   <div class="frow"><label for="a1">Basic salary</label><div class="inp"><span>₦</span><input id="a1" value="450,000" inputmode="numeric"></div></div>
+   <div class="frow"><label for="a2">Housing allowance</label><div class="inp"><span>₦</span><input id="a2" value="180,000" inputmode="numeric"></div></div>
+   <div class="frow"><label for="a3">Transport allowance</label><div class="inp"><span>₦</span><input id="a3" value="90,000" inputmode="numeric"></div></div>
+   <div class="frow"><label for="a4">Other allowances<span class="sub">Medical, bonus, etc.</span></label><div class="inp"><span>₦</span><input id="a4" value="60,000" inputmode="numeric"></div></div>
+   <div class="glab">Reliefs <button type="button">What counts?</button></div>
+   <div class="frow"><label for="a5">Pension<span class="sub">8% of basic + housing + transport</span></label>
+    <div class="sl"><input id="a5" type="range" min="0" max="20" value="8" aria-valuetext="8 percent, ₦691,200"><span class="fig" style="font-weight:600;font-size:.875rem">8%</span></div></div>
+   <div class="frow"><label id="nl">National Housing Fund<span class="sub">2.5% of basic · ₦135,000/yr</span></label>
+    <button class="sw" role="switch" aria-checked="true" aria-labelledby="nl"></button></div>
+   <div class="frow"><label for="a6">NHIS</label><div class="inp"><span>₦</span><input id="a6" value="12,000" inputmode="numeric"></div></div>
+   <div class="frow" style="border:0;align-items:flex-start"><label for="a7">Annual rent paid<span class="sub">Relief = 20%, max ₦500,000</span></label>
+    <div><div class="inp"><span>₦</span><input id="a7" value="2,400,000" inputmode="numeric"></div>
+    <div class="warn">Capped at ₦500,000 above ₦2,500,000 rent.</div></div></div>
+  </div>
+  <aside class="rail rv" aria-label="Your result">
+   <div class="lab">You owe · 2026</div>
+   <div class="answer" id="ans"><span class="cur">₦</span><span id="digits"></span></div>
+   <div class="asub">a month · <span class="fig">₦1,213,764</span> a year</div>
+   <div class="hr"></div>
+   <div class="ln"><span class="k">Gross income</span><span class="v">₦9,360,000</span></div>
+   <div class="ln"><span class="k">Total reliefs</span><span class="v" style="color:var(--green-400)">−₦1,450,200</span></div>
+   <div class="ln"><span class="k">Taxable income</span><span class="v">₦7,909,800</span></div>
+   <div class="ln"><span class="k">Effective rate</span><span class="v">13.0%</span></div>
+   <div class="hr"></div>
+   <div class="ln big"><span class="k">You keep</span><span class="v">₦598,003<span style="font-size:.75rem;color:var(--ink-500);font-weight:400">/mo</span></span></div>
+   <p class="legal">Estimate only, not tax advice. Nigeria Tax Act 2025 (in force 1 January 2026). Employment and self-employment income only. Figures as at 4 Sep 2026.</p>
+   <button class="disc">Reliefs breakdown</button>
+   <button class="disc" aria-expanded="true" style="color:#fff">How this compares to the pre-2026 PITA rules</button>
+   <div class="cmp">
+    <div class="cmpr"><div class="t"><span>2026 · Nigeria Tax Act</span><b>₦1,213,764</b></div><div class="bar"><i style="width:93%;background:linear-gradient(90deg,var(--blue-600),var(--blue-400));animation-delay:.1s"></i></div></div>
+    <div class="cmpr"><div class="t"><span>Pre-2026 · PITA rules</span><b>₦1,308,272</b></div><div class="bar"><i style="width:100%;background:var(--ink-600);animation-delay:.24s"></i></div></div>
+    <div class="delta">₦94,508 less under the 2026 rules</div>
+   </div>
+   <button class="disc">The 2026 tax bands</button>
+   <div style="height:14px"></div>
+   <a class="handoff" href="#">Taash tracks this all year — join the waitlist</a>
+  </aside>
+ </div>
+</div></section>
+
+<section class="after"><div class="wrap rv">
+ <h2>The Taash App is launching soon.</h2>
+ <p>Shown so you can see the dark band end and the light page resume. Everything below the calculator keeps its current design.</p>
+</div></section>
+
+<div id="chrome">
+ <span class="g"><span class="lb">Hero circle</span>
+  <button data-v="v1">1 · Current</button>
+  <button data-v="v2">2 · Halo</button>
+  <button data-v="v3">3 · Aperture (circle)</button>
+  <button data-v="v4" aria-pressed="true">4 · Aperture (ellipse)</button></span>
+ <span class="g"><span class="lb">Motion</span>
+  <button id="mOn" aria-pressed="true">On</button>
+  <button id="mOff">Off</button>
+  <button id="mSlow">Slow ½×</button></span>
+ <span class="g"><span class="lb">Parallax</span><button id="pOn" aria-pressed="true">On</button><button id="pOff">Off</button></span>
+</div>
+
+<script>
+const body=document.body, html=document.documentElement;
+// hero variant
+document.querySelectorAll('#chrome [data-v]').forEach(b=>b.onclick=()=>{
+ body.classList.remove('v1','v2','v3','v4'); body.classList.add(b.dataset.v);
+ document.querySelectorAll('#chrome [data-v]').forEach(x=>x.setAttribute('aria-pressed',x===b));
+ restartArcs();
+});
+function restartArcs(){document.querySelectorAll('.arcs circle,.earcs ellipse').forEach(c=>{c.style.animation='none';c.offsetHeight;c.style.animation=''})}
+// motion
+const set=(id,fn)=>document.getElementById(id).onclick=fn;
+const mBtns=['mOn','mOff','mSlow'].map(i=>document.getElementById(i));
+const press=b=>mBtns.forEach(x=>x.setAttribute('aria-pressed',x===b));
+set('mOn',()=>{html.classList.remove('nomotion');html.style.setProperty('--dur',1);press(mBtns[0]);restartArcs()});
+set('mOff',()=>{html.classList.add('nomotion');press(mBtns[1])});
+set('mSlow',()=>{html.classList.remove('nomotion');html.style.setProperty('--dur',.5);press(mBtns[2]);restartArcs()});
+// parallax
+let px=true;
+const pB=[document.getElementById('pOn'),document.getElementById('pOff')];
+pB[0].onclick=()=>{px=true;pB.forEach(x=>x.setAttribute('aria-pressed',x===pB[0]))};
+pB[1].onclick=()=>{px=false;pB.forEach(x=>x.setAttribute('aria-pressed',x===pB[1]));
+ document.querySelectorAll('.fcard').forEach(c=>c.style.transform='')};
+const stage=document.getElementById('stage');
+stage.addEventListener('pointermove',e=>{
+ if(!px||html.classList.contains('nomotion')||matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+ const r=stage.getBoundingClientRect(), dx=(e.clientX-r.left)/r.width-.5, dy=(e.clientY-r.top)/r.height-.5;
+ document.querySelectorAll('.fcard').forEach(c=>{const p=+c.dataset.p;
+  c.style.transform='translate3d('+(dx*14*p)+'px,'+(dy*14*p)+'px,0)'});
+});
+stage.addEventListener('pointerleave',()=>document.querySelectorAll('.fcard').forEach(c=>c.style.transform=''));
+// scroll reveal
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.12});
+document.querySelectorAll('.rv').forEach((el,i)=>{el.style.transitionDelay=(i%3)*90+'ms';io.observe(el)});
+// digit roll on the answer
+const VAL='101,147';
+function renderDigits(){
+ const t=document.getElementById('digits'); t.innerHTML='';
+ [...VAL].forEach((ch,i)=>{
+  if(!/\d/.test(ch)){const s=document.createElement('span');s.textContent=ch;t.appendChild(s);return}
+  const w=document.createElement('span'); w.className='roll';
+  const col=document.createElement('i'); col.textContent='0123456789'.split('').join('\n');
+  col.style.whiteSpace='pre'; w.appendChild(col); t.appendChild(w);
+  const target=+ch;
+  if(html.classList.contains('nomotion')||matchMedia('(prefers-reduced-motion:reduce)').matches){
+   col.style.transition='none'; col.style.transform='translateY(-'+target+'em)';
+  }else{
+   col.style.transform='translateY(0)';
+   setTimeout(()=>{col.style.transform='translateY(-'+target+'em)'},120+i*55);
+  }
+ });
+}
+new IntersectionObserver((es,o)=>es.forEach(e=>{if(e.isIntersecting){renderDigits();o.unobserve(e.target)}}),{threshold:.4})
+ .observe(document.getElementById('ans'));
+renderDigits();
+</script>
+</body></html>
