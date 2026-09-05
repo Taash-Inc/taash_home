@@ -2,27 +2,14 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [showMobileWaitlist, setShowMobileWaitlist] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      // Show the waitlist button after scrolling past ~500px (past the hero CTA buttons)
-      setShowMobileWaitlist(window.scrollY > 200);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    handleScroll(); // Check initial position
-
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   return (
     <header
-      className='fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-border-light'
+      className='fixed top-0 right-0 left-0 z-50 border-b border-ink-200 bg-white/95 backdrop-blur-sm'
       role='banner'>
       <div className='max-w-7xl mx-auto px-6 py-4'>
         <nav className='flex items-center justify-between' aria-label='Main navigation'>
@@ -35,22 +22,22 @@ export default function Header() {
           <div className='hidden md:flex items-center gap-8'>
             <Link
               href='#about'
-              className='text-primary-dark hover:text-primary-blue transition-colors font-medium'>
+              className='font-medium text-ink-1000 transition-colors hover:text-brand-700'>
               About
             </Link>
             <Link
               href='#features'
-              className='text-primary-dark hover:text-primary-blue transition-colors font-medium'>
+              className='font-medium text-ink-1000 transition-colors hover:text-brand-700'>
               Features
             </Link>
             <Link
               href='#who-its-for'
-              className='text-primary-dark hover:text-primary-blue transition-colors font-medium'>
+              className='font-medium text-ink-1000 transition-colors hover:text-brand-700'>
               Who It&apos;s For
             </Link>
             <Link
               href='#resources'
-              className='text-primary-dark hover:text-primary-blue transition-colors font-medium'>
+              className='font-medium text-ink-1000 transition-colors hover:text-brand-700'>
               Resources
             </Link>
           </div>
@@ -58,7 +45,7 @@ export default function Header() {
           {/* CTA Button - Desktop */}
           <Link
             href='#waitlist'
-            className='hidden sm:flex bg-primary-dark text-white px-5 py-2.5 rounded-full font-medium items-center gap-2 hover:bg-text-dark transition-colors'>
+            className='hidden items-center gap-2 rounded-full bg-ink-1000 px-5 py-2.5 font-medium text-white transition-colors hover:bg-ink-900 sm:flex'>
             Join Waitlist
             <svg
               width='16'
@@ -78,9 +65,12 @@ export default function Header() {
 
           {/* Mobile Menu Button */}
           <button
-            className='md:hidden p-2 text-primary-dark'
+            type='button'
+            className='p-2 text-ink-1000 md:hidden'
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label='Toggle menu'>
+            aria-expanded={mobileMenuOpen}
+            aria-controls='mobile-menu'
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}>
             {mobileMenuOpen ? (
               <svg width='24' height='24' fill='none' stroke='currentColor' strokeWidth='2'>
                 <path d='M6 6l12 12M6 18L18 6' strokeLinecap='round' />
@@ -95,43 +85,38 @@ export default function Header() {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className='md:hidden pt-4 pb-2 border-t border-border-light mt-4'>
+          <div id='mobile-menu' className='mt-4 border-t border-ink-200 pt-4 pb-2 md:hidden'>
             <div className='flex flex-col gap-4'>
               <Link
                 href='#about'
                 onClick={() => setMobileMenuOpen(false)}
-                className='text-primary-dark hover:text-primary-blue transition-colors font-medium py-2'>
+                className='py-2 font-medium text-ink-1000 transition-colors hover:text-brand-700'>
                 About
               </Link>
               <Link
                 href='#features'
                 onClick={() => setMobileMenuOpen(false)}
-                className='text-primary-dark hover:text-primary-blue transition-colors font-medium py-2'>
+                className='py-2 font-medium text-ink-1000 transition-colors hover:text-brand-700'>
                 Features
               </Link>
               <Link
                 href='#who-its-for'
                 onClick={() => setMobileMenuOpen(false)}
-                className='text-primary-dark hover:text-primary-blue transition-colors font-medium py-2'>
+                className='py-2 font-medium text-ink-1000 transition-colors hover:text-brand-700'>
                 Who It&apos;s For
               </Link>
               <Link
                 href='#resources'
                 onClick={() => setMobileMenuOpen(false)}
-                className='text-primary-dark hover:text-primary-blue transition-colors font-medium py-2'>
+                className='py-2 font-medium text-ink-1000 transition-colors hover:text-brand-700'>
                 Resources
               </Link>
-              <div
-                className={`overflow-hidden transition-all duration-400 ease-in-out ${
-                  showMobileWaitlist ? 'max-h-20 opacity-100 mt-2' : 'max-h-0 opacity-0 mt-0'
-                }`}>
-                <Link
-                  href='#waitlist'
-                  onClick={() => setMobileMenuOpen(false)}
-                  className='block bg-primary-dark text-white px-5 py-3.5 rounded-lg font-medium text-center hover:bg-text-dark transition-colors'>
-                  Join Waitlist
-                </Link>
-              </div>
+              <Link
+                href='#waitlist'
+                onClick={() => setMobileMenuOpen(false)}
+                className='mt-2 block rounded-lg bg-ink-1000 px-5 py-3.5 text-center font-medium text-white transition-colors hover:bg-ink-900'>
+                Join Waitlist
+              </Link>
             </div>
           </div>
         )}
