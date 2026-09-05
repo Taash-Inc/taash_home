@@ -1,61 +1,24 @@
 'use client';
 
+import {
+  computeCreatorTax,
+  computeSalaryTax,
+  describeBrackets,
+  formatNaira,
+  parseAmount,
+  FIGURES_AS_AT,
+  NTA_2026_BRACKETS,
+  PITA_PRE_2026_BRACKETS,
+  RELIEF_RULES,
+  TAX_YEAR,
+} from '@/lib/tax';
 import { useMemo, useState } from 'react';
 
-// OLD PITA Tax Brackets (before NTA 2025)
-const PITA_OLD_BRACKETS = [
-  { min: 0, max: 300000, rate: 0.07 }, // First ₦300,000 at 7%
-  { min: 300000, max: 600000, rate: 0.11 }, // Next ₦300,000 at 11%
-  { min: 600000, max: 1100000, rate: 0.15 }, // Next ₦500,000 at 15%
-  { min: 1100000, max: 1600000, rate: 0.19 }, // Next ₦500,000 at 19%
-  { min: 1600000, max: 3200000, rate: 0.21 }, // Next ₦1,600,000 at 21%
-  { min: 3200000, max: Infinity, rate: 0.24 }, // Above ₦3,200,000 at 24%
-];
-
-// NEW NTA 2025 PAYE Tax Brackets
-const NTA_2025_BRACKETS = [
-  { min: 0, max: 800000, rate: 0 }, // First ₦800,000 at 0% (TAX FREE)
-  { min: 800000, max: 3000000, rate: 0.15 }, // Next ₦2,200,000 at 15%
-  { min: 3000000, max: 12000000, rate: 0.18 }, // Next ₦9,000,000 at 18%
-  { min: 12000000, max: 25000000, rate: 0.21 }, // Next ₦13,000,000 at 21%
-  { min: 25000000, max: 50000000, rate: 0.23 }, // Next ₦25,000,000 at 23%
-  { min: 50000000, max: Infinity, rate: 0.25 }, // Above ₦50,000,000 at 25%
-];
-
-type TaxBracket = { min: number; max: number; rate: number };
-
-function calculateTaxWithBrackets(income: number, brackets: TaxBracket[]): number {
-  let tax = 0;
-  let remainingIncome = income;
-
-  for (const bracket of brackets) {
-    if (remainingIncome <= 0) break;
-
-    const bracketSize = bracket.max - bracket.min;
-    const taxableInBracket = Math.min(remainingIncome, bracketSize);
-    tax += taxableInBracket * bracket.rate;
-    remainingIncome -= taxableInBracket;
-  }
-
-  return tax;
-}
-
-// Calculate tax using NEW NTA 2025 rates
-function calculateTax(income: number): number {
-  return calculateTaxWithBrackets(income, NTA_2025_BRACKETS);
-}
-
-// Calculate tax using OLD PITA rates (for comparison)
-function calculateOldTax(income: number): number {
-  return calculateTaxWithBrackets(income, PITA_OLD_BRACKETS);
-}
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-NG', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
+// Bracket tables, relief rules and all arithmetic live in lib/tax — pure, unit-tested, and
+// the single source of truth for both the calculation and the bands shown further down.
+const NTA_BANDS = describeBrackets(NTA_2026_BRACKETS);
+const PITA_BANDS = describeBrackets(PITA_PRE_2026_BRACKETS);
+const formatCurrency = formatNaira;
 
 type UserType = 'salary' | 'creator';
 
@@ -82,88 +45,35 @@ export default function TaxEstimator() {
   const [grossIncome, setGrossIncome] = useState<string>('');
   const [businessExpenses, setBusinessExpenses] = useState<string>('');
 
-  // Helper to parse currency input
-  const parseAmount = (value: string): number => {
-    return parseFloat(value.replace(/,/g, '')) || 0;
-  };
-
   // Calculate annual values based on income type
   const multiplier = incomeType === 'monthly' ? 12 : 1;
 
-  // SALARY EARNER CALCULATIONS
   const salaryCalculations = useMemo(() => {
-    const basic = parseAmount(basicSalary) * multiplier;
-    const housing = parseAmount(housingAllowance) * multiplier;
-    const transport = parseAmount(transportAllowance) * multiplier;
-    const other = parseAmount(otherAllowances) * multiplier;
-
-    // Step 1: Gross Annual Income
-    const grossIncome = basic + housing + transport + other;
-
-    // ===== NTA 2025 (NEW) CALCULATION =====
-    // Pension (max 8% of gross) - unchanged
-    const pension = Math.min(grossIncome * (pensionRate / 100), grossIncome * 0.08);
-
-    // NHF (2.5% of basic salary) - unchanged
-    const nhf = nhfEnabled ? basic * 0.025 : 0;
-
-    // NHIS - unchanged
-    const nhis = parseAmount(nhisAmount) * multiplier;
-
-    // Rent Relief - NTA 2025: 20% of annual rent paid, capped at ₦500,000
-    const annualRentPaid = parseAmount(rentDeduction);
-    const rentRelief = Math.min(annualRentPaid * 0.2, 500000);
-
-    // Total Reliefs (NTA 2025 - No Basic Relief, No Consolidated Relief)
-    const totalReliefs = pension + nhf + nhis + rentRelief;
-
-    // Taxable Income (NTA 2025)
-    const taxableIncome = Math.max(0, grossIncome - totalReliefs);
-
-    // Calculate Tax using NEW NTA 2025 rates
-    const annualTax = calculateTax(taxableIncome);
-    const monthlyTax = annualTax / 12;
-
-    // ===== OLD PITA CALCULATION (for comparison) =====
-    // Old Basic Relief: MAX(1% of gross, ₦200,000) + 20% of gross
-    const oldBasicRelief = Math.max(grossIncome * 0.01, 200000);
-    const oldConsolidatedRelief = grossIncome * 0.2;
-    const oldTotalReliefs = oldBasicRelief + oldConsolidatedRelief + pension + nhf + nhis;
-    const oldTaxableIncome = Math.max(0, grossIncome - oldTotalReliefs);
-    const oldAnnualTax = calculateOldTax(oldTaxableIncome);
-    const oldMonthlyTax = oldAnnualTax / 12;
-
-    // Calculate savings
-    const taxSavings = oldAnnualTax - annualTax;
-    const taxSavingsPercent = oldAnnualTax > 0 ? (taxSavings / oldAnnualTax) * 100 : 0;
-
-    // Other outputs
-    const effectiveRate = grossIncome > 0 ? (annualTax / grossIncome) * 100 : 0;
-    const oldEffectiveRate = grossIncome > 0 ? (oldAnnualTax / grossIncome) * 100 : 0;
-    const takeHome = grossIncome - annualTax;
-
+    const r = computeSalaryTax({
+      basic: parseAmount(basicSalary) * multiplier,
+      housing: parseAmount(housingAllowance) * multiplier,
+      transport: parseAmount(transportAllowance) * multiplier,
+      other: parseAmount(otherAllowances) * multiplier,
+      pensionRatePercent: pensionRate,
+      nhfEnabled,
+      nhisAnnual: parseAmount(nhisAmount) * multiplier,
+      // Rent is always entered as an annual figure, so it is not scaled by the toggle.
+      annualRentPaid: parseAmount(rentDeduction),
+    });
     return {
-      grossIncome,
-      pension,
-      nhf,
-      nhis,
-      rentRelief,
-      annualRentPaid,
-      totalReliefs,
-      taxableIncome,
-      annualTax,
-      monthlyTax,
-      effectiveRate,
-      takeHome,
-      basic,
-      // Old PITA comparison
-      oldTotalReliefs,
-      oldTaxableIncome,
-      oldAnnualTax,
-      oldMonthlyTax,
-      oldEffectiveRate,
-      taxSavings,
-      taxSavingsPercent,
+      ...r,
+      pension: r.reliefs.pension,
+      nhf: r.reliefs.nhf,
+      nhis: r.reliefs.nhis,
+      rentRelief: r.reliefs.rentRelief,
+      annualRentPaid: parseAmount(rentDeduction),
+      totalReliefs: r.reliefs.total,
+      takeHome: r.takeHomeAnnual,
+      oldAnnualTax: r.comparison.priorRegimeAnnualTax,
+      oldMonthlyTax: r.comparison.priorRegimeMonthlyTax,
+      oldEffectiveRate: r.comparison.priorRegimeEffectiveRate,
+      taxSavings: r.comparison.difference,
+      taxSavingsPercent: r.comparison.differencePercent,
     };
   }, [
     basicSalary,
@@ -177,60 +87,25 @@ export default function TaxEstimator() {
     multiplier,
   ]);
 
-  // CREATOR/SELF-EMPLOYED CALCULATIONS
   const creatorCalculations = useMemo(() => {
-    const gross = parseAmount(grossIncome) * multiplier;
-    const expenses = parseAmount(businessExpenses) * multiplier;
-
-    // ===== NTA 2025 (NEW) CALCULATION =====
-    // For creators: Simple calculation - gross minus business expenses
-    // NTA 2025: No Basic Relief or Consolidated Relief for self-employed
-    const totalDeductions = expenses;
-
-    // Taxable Income (NTA 2025)
-    const taxableIncome = Math.max(0, gross - totalDeductions);
-
-    // Calculate Tax using NEW NTA 2025 rates
-    const annualTax = calculateTax(taxableIncome);
-    const monthlyTax = annualTax / 12;
-
-    // ===== OLD PITA CALCULATION (for comparison) =====
-    // Old: Basic Relief + 20% Consolidated Relief applied
-    const oldBasicRelief = Math.max(gross * 0.01, 200000);
-    const oldConsolidatedRelief = gross * 0.2;
-    const oldTotalDeductions = expenses + oldBasicRelief + oldConsolidatedRelief;
-    const oldTaxableIncome = Math.max(0, gross - oldTotalDeductions);
-    const oldAnnualTax = calculateOldTax(oldTaxableIncome);
-    const oldMonthlyTax = oldAnnualTax / 12;
-
-    // Calculate savings
-    const taxSavings = oldAnnualTax - annualTax;
-    const taxSavingsPercent = oldAnnualTax > 0 ? (taxSavings / oldAnnualTax) * 100 : 0;
-
-    // Other outputs
-    const effectiveRate = gross > 0 ? (annualTax / gross) * 100 : 0;
-    const oldEffectiveRate = gross > 0 ? (oldAnnualTax / gross) * 100 : 0;
-    const takeHome = gross - expenses - annualTax;
-
+    const r = computeCreatorTax({
+      grossIncome: parseAmount(grossIncome) * multiplier,
+      businessExpenses: parseAmount(businessExpenses) * multiplier,
+      annualRentPaid: parseAmount(rentDeduction),
+    });
     return {
-      grossIncome: gross,
-      businessExpenses: expenses,
-      totalDeductions,
-      taxableIncome,
-      annualTax,
-      monthlyTax,
-      effectiveRate,
-      takeHome,
-      // Old PITA comparison
-      oldTotalDeductions,
-      oldTaxableIncome,
-      oldAnnualTax,
-      oldMonthlyTax,
-      oldEffectiveRate,
-      taxSavings,
-      taxSavingsPercent,
+      ...r,
+      businessExpenses: r.reliefs.businessExpenses,
+      rentRelief: r.reliefs.rentRelief,
+      totalDeductions: r.reliefs.total,
+      takeHome: r.takeHomeAnnual,
+      oldAnnualTax: r.comparison.priorRegimeAnnualTax,
+      oldMonthlyTax: r.comparison.priorRegimeMonthlyTax,
+      oldEffectiveRate: r.comparison.priorRegimeEffectiveRate,
+      taxSavings: r.comparison.difference,
+      taxSavingsPercent: r.comparison.differencePercent,
     };
-  }, [grossIncome, businessExpenses, multiplier]);
+  }, [grossIncome, businessExpenses, rentDeduction, multiplier]);
 
   // Get current calculations based on user type
   const calc = userType === 'salary' ? salaryCalculations : creatorCalculations;
@@ -272,8 +147,9 @@ export default function TaxEstimator() {
             PAYE Tax Calculator
           </h2>
           <p className='text-lg text-text-gray max-w-2xl mx-auto'>
-            Compare your tax under the new Nigeria Tax Act 2025 with the old PITA rates. See how
-            much you save with the new ₦800,000 tax-free threshold.
+            Work out what you owe under the Nigeria Tax Act 2025, in force from 1 January{' '}
+            {TAX_YEAR}. The first ₦800,000 of taxable income is tax-free. We also show how the
+            figure compares with the rules that applied before 2026.
           </p>
         </div>
 
@@ -590,9 +466,9 @@ export default function TaxEstimator() {
                         />
                       </div>
                       <p className='text-xs text-text-gray mt-1'>
-                        Relief = 20% of rent, max ₦500,000
+                        Relief = {Math.round(RELIEF_RULES.rentReliefRate * 100)}% of rent, max ₦{formatCurrency(RELIEF_RULES.rentReliefCap)}
                       </p>
-                      {parseAmount(rentDeduction) > 2500000 && (
+                      {parseAmount(rentDeduction) > RELIEF_RULES.rentAtWhichCapBinds && (
                         <p className='text-xs text-amber-600 mt-1 flex items-center gap-1'>
                           <svg className='w-3 h-3' fill='currentColor' viewBox='0 0 20 20'>
                             <path
@@ -601,8 +477,9 @@ export default function TaxEstimator() {
                               clipRule='evenodd'
                             />
                           </svg>
-                          Relief capped at ₦500,000. Rent above ₦2,500,000 won&apos;t increase your
-                          relief.
+                          Relief capped at ₦{formatCurrency(RELIEF_RULES.rentReliefCap)}. Rent
+                          above ₦{formatCurrency(RELIEF_RULES.rentAtWhichCapBinds)} won&apos;t
+                          increase your relief.
                         </p>
                       )}
                     </div>
@@ -804,8 +681,12 @@ export default function TaxEstimator() {
                 {/* Tax Savings Banner */}
                 {(userType === 'salary'
                   ? salaryCalculations.taxSavings
-                  : creatorCalculations.taxSavings) > 0 && (
-                  <div className='bg-gradient-to-r from-green-500 to-green-600 rounded-2xl p-4 text-white'>
+                  : creatorCalculations.taxSavings) !== 0 && (
+                  <div className={`rounded-2xl p-4 text-white ${
+                      calc.comparison.difference > 0
+                        ? 'bg-gradient-to-r from-green-600 to-green-700'
+                        : 'bg-gradient-to-r from-slate-600 to-slate-700'
+                    }`}>
                     <div className='flex items-center gap-3'>
                       <div className='w-10 h-10 rounded-full bg-white/20 flex items-center justify-center'>
                         <svg
@@ -824,26 +705,35 @@ export default function TaxEstimator() {
                         </svg>
                       </div>
                       <div>
-                        <p className='text-sm text-white/80'>You save under NTA 2025</p>
+                        <p className='text-sm text-white/80'>
+                          {calc.comparison.difference > 0
+                            ? `You pay less under the ${TAX_YEAR} rules`
+                            : `You pay more under the ${TAX_YEAR} rules`}
+                        </p>
                         <p className='text-2xl font-bold'>
                           ₦
                           {formatCurrency(
-                            userType === 'salary'
-                              ? salaryCalculations.taxSavings
-                              : creatorCalculations.taxSavings
+                            Math.abs(
+                              userType === 'salary'
+                                ? salaryCalculations.taxSavings
+                                : creatorCalculations.taxSavings
+                            )
                           )}
                           /year
                         </p>
                       </div>
                       <div className='ml-auto text-right'>
                         <p className='text-3xl font-bold'>
-                          {(userType === 'salary'
-                            ? salaryCalculations.taxSavingsPercent
-                            : creatorCalculations.taxSavingsPercent
+                          {Math.abs(
+                            userType === 'salary'
+                              ? salaryCalculations.taxSavingsPercent
+                              : creatorCalculations.taxSavingsPercent
                           ).toFixed(0)}
                           %
                         </p>
-                        <p className='text-xs text-white/80'>less tax</p>
+                        <p className='text-xs text-white/80'>
+                          {calc.comparison.difference > 0 ? 'less tax' : 'more tax'}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -862,7 +752,12 @@ export default function TaxEstimator() {
                     <div className='space-y-3'>
                       <div>
                         <p className='text-xs text-gray-500'>Annual Tax</p>
-                        <p className='text-2xl font-bold text-gray-600 line-through decoration-red-400 decoration-2'>
+                        <p
+                          className={`text-2xl font-bold text-gray-600 ${
+                            calc.comparison.difference > 0
+                              ? 'line-through decoration-red-400 decoration-2'
+                              : ''
+                          }`}>
                           ₦
                           {formatCurrency(
                             userType === 'salary'
@@ -976,14 +871,7 @@ export default function TaxEstimator() {
                     <span className='text-sm font-medium text-gray-600'>PITA Rates</span>
                   </div>
                   <div className='space-y-2'>
-                    {[
-                      { amount: 'First ₦300,000', rate: '7%' },
-                      { amount: 'Next ₦300,000', rate: '11%' },
-                      { amount: 'Next ₦500,000', rate: '15%' },
-                      { amount: 'Next ₦500,000', rate: '19%' },
-                      { amount: 'Next ₦1,600,000', rate: '21%' },
-                      { amount: 'Above ₦3,200,000', rate: '24%' },
-                    ].map((item, i) => (
+                    {PITA_BANDS.map((item, i) => (
                       <div
                         key={i}
                         className='flex justify-between items-center bg-gray-50 rounded-lg px-3 py-2'>
@@ -1003,25 +891,18 @@ export default function TaxEstimator() {
                     <span className='text-sm font-medium text-green-700'>NTA 2025 Rates</span>
                   </div>
                   <div className='space-y-2'>
-                    {[
-                      { amount: 'First ₦800,000', rate: '0%', highlight: true },
-                      { amount: 'Next ₦2,200,000', rate: '15%' },
-                      { amount: 'Next ₦9,000,000', rate: '18%' },
-                      { amount: 'Next ₦13,000,000', rate: '21%' },
-                      { amount: 'Next ₦25,000,000', rate: '23%' },
-                      { amount: 'Above ₦50,000,000', rate: '25%' },
-                    ].map((item, i) => (
+                    {NTA_BANDS.map((item, i) => (
                       <div
                         key={i}
                         className={`flex justify-between items-center rounded-lg px-3 py-2 ${
-                          item.highlight ? 'bg-green-100 border border-green-300' : 'bg-green-50'
+                          item.zeroRated ? 'bg-green-100 border border-green-300' : 'bg-green-50'
                         }`}>
                         <span className='text-sm text-green-700'>{item.amount}</span>
                         <span
                           className={`text-sm font-bold ${
-                            item.highlight ? 'text-green-600' : 'text-green-700'
+                            item.zeroRated ? 'text-green-700' : 'text-green-700'
                           }`}>
-                          {item.rate} {item.highlight && '🎉'}
+                          {item.rate}
                         </span>
                       </div>
                     ))}
@@ -1033,10 +914,12 @@ export default function TaxEstimator() {
             {/* Disclaimer */}
             <div className='px-6 md:px-8 pb-6 md:pb-8'>
               <p className='text-xs text-text-gray text-center'>
-                <strong>Disclaimer:</strong> This calculator compares estimates based on NTA 2025
-                and old PITA PAYE rates. The first ₦800,000 of taxable income is now tax-free under
-                NTA 2025. Actual tax liability may vary. Consult a tax professional for personalized
-                advice.
+                <strong>Estimate only, not tax advice.</strong> Calculated under the Nigeria Tax
+                Act 2025, in force from 1 January {TAX_YEAR}. Covers employment and
+                self-employment income only — it excludes capital gains, rental and foreign
+                income, and state levies, and assumes you are resident in Nigeria. The first
+                ₦800,000 of taxable income is tax-free. Actual liability may vary; consult a tax
+                professional. Figures as at {FIGURES_AS_AT}.
               </p>
             </div>
           </div>
