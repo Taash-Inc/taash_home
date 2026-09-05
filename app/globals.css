@@ -49,7 +49,137 @@
   --color-border-light: var(--border-light);
 
   --font-sans: var(--font-space-grotesk);
-  --font-mono: var(--font-mono);
+  --font-mono: var(--font-jetbrains-mono);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Design system — "Ledger"
+   See docs/design/01-direction-ledger.md §3 for the derivation and every
+   contrast ratio. Ramps are generated in OKLCH from the existing brand hues and
+   gamut-clamped, so the brand hues are preserved exactly: --color-brand-500 is
+   #3b82f6 and --color-mark-600 is the logo's own #4a7fa7.
+
+   These names are deliberately NOT Tailwind palette names. Redefining
+   --color-blue-* or --color-green-* would silently restyle every existing
+   component that uses a stock utility class, so the new ramps live alongside
+   the old tokens rather than replacing them. The legacy :root block above stays
+   until the last component is migrated.
+   ───────────────────────────────────────────────────────────────────────────── */
+@theme {
+  /* Neutral — derived from --primary-dark #0f172a at reduced chroma. Replaces the
+     accidental mix of Tailwind slate AND gray currently rendering on the page. */
+  --color-ink-50: #f6f7f8;
+  --color-ink-100: #ebedf0;
+  --color-ink-200: #dadce1;
+  --color-ink-300: #c3c7ce;
+  --color-ink-400: #a6abb4;
+  --color-ink-500: #8a8f99;
+  --color-ink-600: #717680;   /* 4.56:1 on white */
+  --color-ink-700: #5c6068;   /* 6.31:1 on white */
+  --color-ink-800: #474a51;
+  --color-ink-900: #303338;
+  --color-ink-950: #1e1f23;
+  --color-ink-1000: #0f172a;  /* 17.85:1 on white — the brand dark, unchanged */
+
+  /* Brand blue — #3b82f6 pinned at 500. Note 500 is 3.68:1 on white and fails AA
+     for body text; use 600 (4.68:1) or 700 (6.51:1) for small text on light. */
+  --color-brand-50: #f0f7ff;
+  --color-brand-100: #e1eeff;
+  --color-brand-200: #c7deff;
+  --color-brand-300: #a5c8ff;
+  --color-brand-400: #76abff;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2c70df;
+  --color-brand-700: #205ab9;
+  --color-brand-800: #174692;
+  --color-brand-900: #0d3067;
+  --color-brand-950: #061d44;
+
+  /* Mark — the logo's own blue, which existed in no token before. logo.svg and
+     all five illustrative SVGs are drawn in #4a7fa7. */
+  --color-mark-50: #f1f8fe;
+  --color-mark-100: #e2effa;
+  --color-mark-200: #c8e0f3;
+  --color-mark-300: #a8cce8;
+  --color-mark-400: #82b1d6;
+  --color-mark-500: #5f95be;
+  --color-mark-600: #4a7fa7;
+  --color-mark-700: #386485;  /* 6.31:1 on white */
+  --color-mark-800: #2b4e69;
+  --color-mark-900: #1c3649;
+
+  /* Positive — one meaning only: money the user keeps. #22c55e pinned at 400. */
+  --color-positive-100: #d8f6dd;
+  --color-positive-400: #22c55e;
+  --color-positive-500: #00ac4a;
+  --color-positive-700: #00742e;  /* 5.94:1 on white */
+  --color-positive-900: #004014;
+
+  /* Negative — the one added accent. The estimator must be able to say a figure
+     went up; there was no negative colour in the token system at all. */
+  --color-negative-100: #ffe6e2;
+  --color-negative-500: #f7463f;
+  --color-negative-600: #d52c29;  /* 4.97:1 on white */
+  --color-negative-700: #b01e1e;
+
+  /* Signal — unifies the two unrelated yellows (#fef9c3 token, #ffea66 in use).
+     Warnings only. Ink on signal-500 is 14.63:1. */
+  --color-signal-100: #f8f0bb;
+  --color-signal-300: #d9ca6a;
+  --color-signal-500: #ffea66;
+  --color-signal-700: #6e6100;
+
+  /* Elevation — rules first; shadow reserved for genuine overlays. */
+  --shadow-rail: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px -12px rgb(15 23 42 / 0.12);
+  --shadow-overlay: 0 24px 64px -16px rgb(15 23 42 / 0.28);
+
+  /* Motion. Named so they cannot clash with Tailwind's --ease-in/out/in-out. */
+  --ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-swap: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* Semantic layer — plain custom properties, so nothing generates a utility that could
+   collide with Tailwind's own names.
+   NOTE: these are for use in CSS via var(), NOT as Tailwind class names. There is no
+   `border-rule` utility; in markup use the ramp step directly (border-ink-200). */
+:root {
+  --surface: #ffffff;
+  --surface-raised: var(--color-ink-50);
+  --surface-sunken: var(--color-ink-100);
+  --rule: var(--color-ink-200);
+  --rule-strong: var(--color-ink-300);
+  --text-strong: var(--color-ink-1000);   /* 17.85:1 */
+  --text-body: var(--color-ink-700);      /*  6.31:1 */
+  --text-muted: var(--color-ink-600);     /*  4.56:1 — on white only, not on tint */
+  --accent: var(--color-brand-600);       /*  4.68:1, and white on it is 4.68:1 */
+  --accent-strong: var(--color-brand-700);
+  --focus-ring: var(--color-brand-500);
+  --positive: var(--color-positive-700);  /*  5.94:1 */
+  --negative: var(--color-negative-600);  /*  4.97:1 */
+  --warn-surface: var(--color-signal-100);
+  --warn-text: var(--color-ink-1000);     /* 15.45:1 on warn-surface */
+
+  --dur-fast: 150ms;
+  --dur-base: 220ms;
+  --dur-slow: 380ms;
+}
+
+/* Anchor targets were landing underneath the fixed header. */
+html {
+  scroll-padding-top: 5.5rem;
+}
+
+/* No motion in this codebase respected this before. Every animation has a static
+   end state, so nothing is lost. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 body {

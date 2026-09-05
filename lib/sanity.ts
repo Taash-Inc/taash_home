@@ -1,3 +1,4 @@
+import type { PortableTextBlock } from '@portabletext/types';
 import { createClient } from '@sanity/client';
 import { createImageUrlBuilder } from '@sanity/image-url';
 
@@ -48,8 +49,7 @@ export interface SanityPost {
     alt?: string;
   };
   publishedAt?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  body?: any[];
+  body?: PortableTextBlock[];
   author?: SanityAuthor;
   categories?: SanityCategory[];
 }

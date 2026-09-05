@@ -1,0 +1,477 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Taash — final design (hero frozen)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+ --blue-100:#e1eeff;--blue-200:#c7deff;--blue-300:#a5c8ff;--blue-400:#76abff;
+ --blue-500:#3b82f6;--blue-600:#2c70df;--blue-700:#205ab9;
+ --teal-400:#82b1d6;--teal-600:#4a7fa7;--teal-700:#386485;
+ --green-400:#22c55e;--green-700:#00742e;--red-500:#f7463f;--red-600:#d52c29;
+ --amber:#ffea66;--amber-100:#f8f0bb;
+ --ink-50:#f6f7f8;--ink-100:#ebedf0;--ink-200:#dadce1;--ink-300:#c3c7ce;--ink-400:#a6abb4;
+ --ink-500:#8a8f99;--ink-600:#717680;--ink-700:#5c6068;--ink-900:#303338;--ink:#0f172a;
+ --surface:#fff;--sunken:var(--ink-50);--rule:var(--ink-200);
+ --text:var(--ink);--text-2:var(--ink-700);--text-3:var(--ink-600);
+ --fd:'Space Grotesk',ui-sans-serif,system-ui,sans-serif;
+ --fm:'JetBrains Mono',ui-monospace,Menlo,monospace;
+ --fs:ui-sans-serif,system-ui,-apple-system,sans-serif;
+ --dur:1;
+ --s-xs:3rem;--s-sm:4.5rem;--s-md:6rem;--s-lg:7.5rem;--s-xl:7rem;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--surface);color:var(--text);font-family:var(--fs);font-size:16px;
+ line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;padding-bottom:56px}
+img{max-width:100%;display:block}
+h1,h2,h3{font-family:var(--fd);margin:0;letter-spacing:-.022em}
+h2{font-size:clamp(1.75rem,3.2vw,2rem);line-height:1.15;font-weight:700}
+h3{font-size:1.25rem;line-height:1.3;font-weight:600}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+.fig{font-family:var(--fm);font-variant-numeric:tabular-nums slashed-zero;letter-spacing:-.01em}
+a{color:var(--blue-600)}
+:is(a,button,input,[tabindex]):focus-visible{outline:2px solid var(--blue-500);outline-offset:2px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--fs);
+ font-weight:600;font-size:.9375rem;padding:12px 20px;border-radius:8px;border:1px solid transparent;
+ cursor:pointer;text-decoration:none;min-height:44px}
+.btn-d{background:var(--ink);color:#fff}.btn-b{background:var(--blue-600);color:#fff}
+.btn-s{background:#fff;color:var(--ink);border-color:var(--ink-200)}
+.eyebrow{display:inline-flex;align-items:center;gap:10px;font-size:.75rem;font-weight:700;
+ letter-spacing:.12em;text-transform:uppercase;color:var(--ink-700);margin-bottom:16px}
+.eyebrow::before{content:"";width:26px;height:1px;background:var(--ink-300)}
+.lede{font-size:1.125rem;line-height:1.6;color:var(--text-2);max-width:56ch}
+.rv{opacity:0;transform:translateY(18px);transition:opacity calc(.7s/var(--dur)) ease,transform calc(.7s/var(--dur)) cubic-bezier(.22,1,.36,1)}
+.rv.in{opacity:1;transform:none}
+
+/* preview chrome */
+#chrome{position:fixed;inset:auto 0 0 0;z-index:200;background:#0b0e14;color:#e5e7eb;border-top:1px solid #23262e;
+ padding:9px 16px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;font:500 .8125rem/1 var(--fs)}
+#chrome .lb{color:#8b93a1;font-size:.6875rem;letter-spacing:.1em;text-transform:uppercase;margin-right:4px}
+#chrome button{background:#161a22;border:1px solid #2b303a;color:#c9d1dc;border-radius:7px;padding:7px 12px;
+ cursor:pointer;font:600 .8125rem/1 var(--fs);min-height:34px}
+#chrome button[aria-pressed=true]{background:var(--blue-600);border-color:var(--blue-600);color:#fff}
+.frozen{position:relative}
+html.marks .frozen::after{content:"HERO — FROZEN, PRODUCTION AS-IS";position:absolute;top:8px;left:50%;
+ transform:translateX(-50%);z-index:40;background:#0b0e14;color:#7bf1a8;font:700 .625rem/1 var(--fs);
+ letter-spacing:.14em;padding:7px 12px;border-radius:6px;border:1px solid #23383a}
+html.marks section:not(.frozen){outline:1px dashed rgba(59,130,246,.35);outline-offset:-1px}
+
+/* ── HEADER ── */
+header{position:sticky;top:0;z-index:60;background:rgba(255,255,255,.93);backdrop-filter:blur(12px);
+ border-bottom:1px solid var(--ink-100)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:64px;gap:24px}
+.brand{font-family:var(--fd);font-weight:700;font-size:1.25rem;letter-spacing:-.03em;display:flex;align-items:center;gap:8px}
+.brand svg{width:22px;height:22px}
+.navlinks{display:none;gap:28px;font-size:.9375rem}
+@media(min-width:920px){.navlinks{display:flex}}
+.navlinks a{color:var(--ink);text-decoration:none;font-weight:500}
+.navlinks a:hover{color:var(--blue-600)}
+
+/* ── HERO · FROZEN (production markup + styles verbatim) ── */
+.hero{padding:112px 0 64px;background:#f8fafc;overflow:hidden;min-height:90vh;display:flex;align-items:center}
+.hero .g{display:grid;gap:48px;align-items:center;width:100%}
+@media(min-width:1024px){.hero .g{grid-template-columns:1fr 1fr}}
+.hero .badge{display:inline-flex;align-items:center;gap:8px;background:#C5E2FF;color:#0f172a;
+ padding:8px 16px;border-radius:999px;font-size:.875rem;font-weight:500}
+.hero h1{font-family:var(--fd);font-size:clamp(2.25rem,4.4vw,3.25rem);font-weight:700;color:#0f172a;
+ line-height:1.15;letter-spacing:-.025em;margin:24px 0 0}
+.hero .sub{font-size:1.125rem;color:#64748b;max-width:28rem;line-height:1.625;margin:24px 0 0}
+.hero .cta{display:flex;gap:16px;flex-wrap:wrap;margin-top:32px}
+.hero .cta a{padding:14px 28px;border-radius:8px;font-weight:500;text-decoration:none;font-size:1rem}
+.hero .cta .p{background:#0f172a;color:#fff}
+.hero .cta .s{background:#fff;color:#0f172a;border:1px solid #e5e7eb}
+.hero .art{position:relative;height:620px;display:flex;align-items:center;justify-content:center}
+.hero .ell{position:relative;width:min(750px,92vw);height:min(520px,64vw);border-radius:50%;overflow:hidden;margin:0 auto}
+.hero .ell .grad{position:absolute;inset:0;background:linear-gradient(to bottom,#A3D3FF,#FFEA66)}
+.hero .ell img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scale(1.5);object-position:66% 60%}
+.hero .card{position:absolute;background:#fff;border-radius:16px;box-shadow:0 20px 25px -5px rgba(0,0,0,.1),0 8px 10px -6px rgba(0,0,0,.1);
+ padding:16px;z-index:20}
+.hero .c1{top:96px;left:-16px}
+.hero .c1 .l{font-size:.75rem;color:#64748b;margin-bottom:4px}
+.hero .c1 .v{font-size:1.5rem;font-weight:700;color:#0f172a}
+.hero .c1 .d{font-size:.75rem;color:#22c55e;margin-top:4px}
+.hero .c2{bottom:64px;right:16px;display:flex;align-items:center;gap:12px}
+.hero .c2 .l{font-size:.75rem;color:#64748b;margin-bottom:4px}
+.hero .c2 .v{font-size:1.5rem;font-weight:700;color:#0f172a}
+.hero .c2 img{width:40px;height:40px;border-radius:999px;object-fit:cover}
+.hero .dot{position:absolute;border-radius:999px;z-index:20}
+.hero .d1{top:24px;right:128px;width:12px;height:12px;background:#4A7FA7}
+.hero .d2{bottom:32px;right:96px;width:20px;height:20px;background:#A3D3FF}
+.hero .icn{position:absolute;width:56px;height:56px;border-radius:999px;display:flex;align-items:center;
+ justify-content:center;z-index:20;box-shadow:0 10px 15px -3px rgba(0,0,0,.1)}
+.hero .i1{top:32px;right:64px;background:#FFEA66}
+.hero .i2{left:-32px;top:60%;background:#4A7FA7}
+@media(max-width:1023px){.hero .art{height:420px}.hero .c1{left:0;top:40px}.hero .c2{right:0;bottom:24px}
+ .hero .dot,.hero .icn{display:none}}
+
+/* ── ABOUT ── */
+.about{padding:var(--s-sm) 0;background:var(--sunken);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.about .g{display:grid;gap:40px;align-items:center}
+@media(min-width:960px){.about .g{grid-template-columns:1.05fr .95fr;gap:56px}}
+.about h2{font-size:clamp(1.875rem,3.4vw,2.25rem);margin-bottom:18px}
+.about p{font-size:1.125rem;line-height:1.7;color:var(--text-2);max-width:60ch}
+.about .im{position:relative;aspect-ratio:16/10;border-radius:14px;overflow:hidden;background:var(--ink-100)}
+.about .im img{width:100%;height:100%;object-fit:cover;object-position:50% 18%}
+
+/* ── HOW IT WORKS (reinstated) ── */
+.how{padding:var(--s-md) 0}
+.how .steps{display:grid;gap:0;margin-top:36px;border-top:1px solid var(--rule)}
+@media(min-width:860px){.how .steps{grid-template-columns:repeat(4,1fr)}}
+.how .st{padding:26px 22px 26px 0;border-bottom:1px solid var(--rule);position:relative}
+@media(min-width:860px){.how .st{border-bottom:0;border-right:1px solid var(--rule);padding:26px 22px}
+ .how .st:first-child{padding-left:0}.how .st:last-child{border-right:0}}
+.how .n{font-family:var(--fm);font-size:.75rem;font-weight:700;color:var(--blue-600);letter-spacing:.1em}
+.how .st img{width:52px;height:52px;object-fit:contain;margin:14px 0 16px}
+.how .st h3{font-size:1.0625rem;margin-bottom:6px}
+.how .st p{font-size:.9375rem;color:var(--text-2);margin:0;line-height:1.55}
+
+/* ── FEATURES ── */
+.feat{padding:var(--s-md) 0;background:var(--sunken);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.feat .grid{display:grid;gap:0;margin-top:36px}
+@media(min-width:860px){.feat .grid{grid-template-columns:repeat(4,1fr)}}
+.feat .cell{padding:24px 20px 24px 0;border-top:1px solid var(--ink-300)}
+@media(min-width:860px){.feat .cell{padding:24px 20px}.feat .cell:first-child{padding-left:0}}
+.feat .cell img{width:48px;height:48px;object-fit:contain;margin-bottom:16px}
+.feat .cell h3{font-size:1.0625rem;margin-bottom:6px}
+.feat .cell p{font-size:.9375rem;color:var(--text-2);margin:0;line-height:1.55}
+.feat .foot{margin-top:36px}
+
+/* ── WHO IT'S FOR ── */
+.who{padding:var(--s-md) 0}
+.who .grid{display:grid;gap:16px;margin-top:36px}
+@media(min-width:820px){.who .grid{grid-template-columns:repeat(3,1fr);gap:20px}}
+.who .p{position:relative;aspect-ratio:4/5;overflow:hidden;border-radius:14px;background:var(--ink-100)}
+.who .p img{width:100%;height:100%;object-fit:cover}
+.who .p .ov{position:absolute;inset:auto 0 0 0;padding:22px 20px;color:#fff;
+ background:linear-gradient(180deg,transparent 0%,rgba(15,23,42,.62) 14%,rgba(15,23,42,.90) 32%,rgba(15,23,42,.95) 100%)}
+.who .p h3{color:#fff;font-size:1.25rem;margin-bottom:4px}
+.who .p p{margin:0;font-size:.9375rem;color:rgba(255,255,255,.92);line-height:1.5}
+
+/* ── ESTIMATOR · DARK BAND ── */
+.est{background:var(--ink);color:var(--ink-50);padding:var(--s-lg) 0;position:relative;overflow:hidden}
+.est::before{content:"";position:absolute;inset:0;pointer-events:none;
+ background:radial-gradient(900px 420px at 78% 0%,rgba(59,130,246,.16),transparent 62%),
+            radial-gradient(700px 380px at 8% 100%,rgba(74,127,167,.14),transparent 60%)}
+.est::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+ background-image:linear-gradient(rgba(255,255,255,.032) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.032) 1px,transparent 1px);
+ background-size:40px 40px;-webkit-mask:linear-gradient(180deg,#000,transparent 55%);mask:linear-gradient(180deg,#000,transparent 55%)}
+.est .wrap{position:relative;z-index:2}
+.est .eyebrow{color:var(--ink-500)}.est .eyebrow::before{background:var(--ink-700)}
+.tag{display:inline-flex;align-items:center;gap:8px;font-size:.75rem;font-weight:700;letter-spacing:.06em;
+ text-transform:uppercase;color:var(--teal-400);background:rgba(74,127,167,.14);border:1px solid rgba(130,177,214,.28);
+ padding:6px 12px;border-radius:6px;margin-bottom:16px}
+.est h2{color:#fff}.est-head{max-width:660px;margin-bottom:40px}
+.est-head p{color:var(--ink-300);font-size:1.125rem;margin:12px 0 0}
+.est-g{display:grid;gap:24px}
+@media(min-width:1000px){.est-g{grid-template-columns:58fr 42fr;gap:28px;align-items:start}}
+.pane{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:24px}
+.seg{display:flex;border:1px solid rgba(255,255,255,.14);border-radius:9px;overflow:hidden;margin-bottom:12px}
+.seg button{flex:1;background:transparent;border:0;padding:12px 8px;font:600 .875rem/1 var(--fs);
+ color:var(--ink-400);cursor:pointer;min-height:44px;transition:background .18s,color .18s}
+.seg button[aria-pressed=true]{background:var(--blue-600);color:#fff}
+.glab{font-size:.6875rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-500);
+ margin:26px 0 8px;display:flex;justify-content:space-between;align-items:center}
+.glab button{background:none;border:0;font:600 .75rem/1 var(--fs);color:var(--blue-400);cursor:pointer;text-transform:none;letter-spacing:0;padding:6px}
+.frow{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.075)}
+.frow:last-child{border-bottom:0}
+.frow label{font-size:.9375rem;color:var(--ink-300)}
+.frow .sub{display:block;font-size:.75rem;color:var(--ink-500);margin-top:2px}
+.inp{display:flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.18);border-radius:8px;
+ padding:8px 12px;background:rgba(0,0,0,.28);min-width:154px;transition:border-color .18s,box-shadow .18s}
+.inp:focus-within{border-color:var(--blue-500);box-shadow:0 0 0 3px rgba(59,130,246,.22)}
+.inp span{color:var(--ink-500)}
+.inp input{border:0;outline:0;background:transparent;color:#fff;width:100%;text-align:right;
+ font-family:var(--fm);font-variant-numeric:tabular-nums;font-size:.9375rem;font-weight:500}
+.sl{display:flex;align-items:center;gap:12px;min-width:154px}.sl input{flex:1;accent-color:var(--blue-500)}
+.sw{width:46px;height:26px;border-radius:999px;background:var(--blue-600);border:0;position:relative;cursor:pointer;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:23px;width:20px;height:20px;border-radius:999px;background:#fff}
+.warn{background:rgba(255,234,102,.12);border:1px solid rgba(255,234,102,.26);color:var(--amber-100);
+ font-size:.75rem;padding:7px 10px;border-radius:6px;margin-top:8px}
+.rail{background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.03));
+ border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:26px}
+@media(min-width:1000px){.rail{position:sticky;top:88px}}
+.rail .lab{font-size:.6875rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-400)}
+.answer{font-family:var(--fm);font-variant-numeric:tabular-nums;font-size:clamp(2.5rem,6.4vw,3.5rem);
+ font-weight:700;line-height:1;letter-spacing:-.03em;margin:10px 0 6px;color:#fff;display:flex;align-items:baseline}
+.answer .cur{color:var(--ink-300);margin-right:3px;font-weight:500}
+.roll{display:inline-block;overflow:hidden;height:1em;line-height:1}
+.roll i{display:block;font-style:normal;transition:transform calc(.55s/var(--dur)) cubic-bezier(.22,1,.36,1)}
+.asub{font-size:.9375rem;color:var(--ink-300)}
+.hr{height:1px;background:rgba(255,255,255,.1);margin:20px 0}
+.ln{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:6px 0;font-size:.875rem}
+.ln .k{color:var(--ink-400)}
+.ln .v{font-family:var(--fm);font-variant-numeric:tabular-nums;font-weight:500;color:var(--ink-100)}
+.ln.big .v{font-size:1.25rem;font-weight:700;color:var(--green-400)}
+.disc{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid rgba(255,255,255,.1);
+ padding:12px 0;font:600 .875rem/1.4 var(--fs);color:var(--ink-300);cursor:pointer}
+.disc::before{content:"▸ ";color:var(--ink-500)}
+.cmp{padding:14px;background:rgba(0,0,0,.26);border-radius:10px;margin-top:10px}
+.cmpr{margin-bottom:12px}
+.cmpr .t{display:flex;justify-content:space-between;font-size:.8125rem;margin-bottom:5px;color:var(--ink-400)}
+.cmpr .t b{font-family:var(--fm);font-variant-numeric:tabular-nums;color:#fff;font-weight:600}
+.bar{height:9px;border-radius:3px;background:rgba(255,255,255,.09);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:3px;transform-origin:0 50%;animation:grow calc(.9s/var(--dur)) cubic-bezier(.22,1,.36,1) both}
+@keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.delta{font-size:.875rem;font-weight:600;color:var(--green-400);text-align:center;padding-top:2px}
+.legal{font-size:.75rem;color:var(--ink-500);line-height:1.5;margin:16px 0}
+.handoff{display:block;text-align:center;background:var(--blue-600);color:#fff;border-radius:10px;padding:14px;
+ font-weight:600;text-decoration:none;font-size:.9375rem;min-height:44px;transition:transform .2s cubic-bezier(.22,1,.36,1),box-shadow .2s}
+.handoff:hover{transform:translateY(-1px);box-shadow:0 10px 26px -10px rgba(59,130,246,.7)}
+
+/* ── APP DOWNLOAD (demoted) ── */
+.app{padding:var(--s-xs) 0;border-bottom:1px solid var(--rule)}
+.app .g{display:flex;gap:32px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.app .chip{display:inline-flex;align-items:center;gap:8px;background:var(--amber);color:var(--ink);
+ font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:6px 12px;border-radius:6px}
+.app h2{font-size:1.5rem;margin:12px 0 6px}
+.app p{color:var(--text-2);margin:0;max-width:46ch;font-size:.9375rem}
+.app .badges{display:flex;gap:12px;align-items:center;margin-top:16px}
+.app .badges img{height:40px;width:auto}
+.app .ph{width:min(280px,40vw)}
+
+/* ── WAITLIST ── */
+.wait{padding:var(--s-lg) 0;background:var(--sunken);border-bottom:1px solid var(--rule)}
+.wait .card{max-width:560px;margin:0 auto;background:#fff;border:1px solid var(--rule);border-radius:18px;padding:32px}
+.wait h2{font-size:1.75rem;margin-bottom:8px}
+.wait .card>p{color:var(--text-2);margin:0 0 26px;font-size:.9375rem}
+.fld{margin-bottom:16px}
+.fld label{display:block;font-size:.875rem;font-weight:600;margin-bottom:6px}
+.fld input[type=text],.fld input[type=email]{width:100%;border:1px solid var(--ink-300);border-radius:8px;
+ padding:12px 14px;font:400 1rem/1.4 var(--fs);color:var(--ink);min-height:48px}
+.fld input:focus{outline:2px solid var(--blue-500);outline-offset:1px;border-color:var(--blue-500)}
+.chk{display:flex;gap:12px;align-items:flex-start;margin:18px 0}
+.chk input{width:20px;height:20px;margin-top:2px;accent-color:var(--blue-600)}
+.chk label{font-size:.875rem;color:var(--text-2);line-height:1.5}
+.turn{border:1px dashed var(--ink-300);border-radius:8px;padding:14px;text-align:center;color:var(--text-3);
+ font-size:.8125rem;margin-bottom:16px}
+
+/* ── RESOURCES ── */
+.res{padding:var(--s-sm) 0}
+.rail2{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(280px,1fr);gap:20px;overflow-x:auto;
+ scroll-snap-type:x mandatory;padding:32px 0 8px;scrollbar-width:thin}
+.rail2 article{scroll-snap-align:start}
+.rail2 .im{aspect-ratio:16/9;border-radius:12px;background:linear-gradient(135deg,var(--blue-100),var(--ink-100));margin-bottom:14px}
+.rail2 .meta{font-size:.75rem;color:var(--text-3);font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.rail2 h3{font-size:1.0625rem;line-height:1.4;margin-bottom:6px}
+.rail2 p{font-size:.9375rem;color:var(--text-2);margin:0}
+.res .nav2{display:flex;gap:8px;margin-top:20px;align-items:center}
+.res .nav2 button{width:44px;height:44px;border-radius:999px;border:1px solid var(--ink-300);background:#fff;cursor:pointer;color:var(--ink)}
+.res .dots{display:flex;gap:8px;margin-left:8px}
+.res .dots i{width:24px;height:24px;display:grid;place-items:center;cursor:pointer}
+.res .dots i::after{content:"";width:8px;height:8px;border-radius:999px;background:var(--ink-300)}
+.res .dots i.on::after{background:var(--blue-600)}
+
+/* ── FOOTER ── */
+footer{background:var(--ink);color:var(--ink-300);padding:56px 0 40px}
+footer .top{display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap}
+footer .soc{display:flex;gap:10px}
+footer .soc a{width:40px;height:40px;border-radius:999px;background:rgba(255,255,255,.07);display:grid;
+ place-items:center;color:var(--ink-300)}
+footer .bot{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:32px;
+ padding-top:24px;border-top:1px solid rgba(255,255,255,.1);font-size:.875rem}
+footer a{color:var(--ink-300);text-decoration:none}
+footer nav{display:flex;gap:24px}
+
+html.nomotion *,html.nomotion *::before,html.nomotion *::after{animation:none!important;transition:none!important}
+html.nomotion .rv{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;
+ animation-iteration-count:1!important;transition-duration:.001ms!important}.rv{opacity:1;transform:none}}
+</style></head><body>
+
+<header><div class="wrap nav">
+ <div class="brand"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 7l9 5 9-5-9-5-9 5z" fill="#4a7fa7"/><path d="M3 12l9 5 9-5M3 17l9 5 9-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Taash</div>
+ <nav class="navlinks"><a href="#about">About</a><a href="#features">Features</a><a href="#who">Who It's For</a><a href="#res">Resources</a></nav>
+ <a class="btn btn-d" href="#wait">Join Waitlist</a>
+</div></header>
+
+<!-- ══════ HERO · FROZEN ══════ -->
+<section class="hero frozen"><div class="wrap g">
+ <div>
+  <div class="badge">👥 Made for Nigerian Freelancers</div>
+  <h1>Effortless Tax and<br>Finance for<br>Nigeria's New<br>Workforce</h1>
+  <p class="sub">Taash turns daily income and spending into clear records that are always tax-ready. Built for freelancers, workers, creators, and small businesses in Nigeria.</p>
+  <div class="cta"><a class="p" href="#wait">Join Waitlist</a><a class="s" href="#est">Try Tax Estimator</a></div>
+ </div>
+ <div class="art">
+  <div class="ell"><div class="grad"></div><img src="../../../public/hero-image.png" alt="African freelancer working on laptop"></div>
+  <div class="card c1"><div class="l">Monthly Tax Estimate</div><div class="v">₦45,600</div><div class="d">↑ 12% vs last month</div></div>
+  <div class="card c2"><div><div class="l">Expenses This Month</div><div class="v">₦128,400</div></div><img src="../../../public/avatar-small.png" alt="User avatar"></div>
+  <div class="dot d1"></div><div class="dot d2"></div>
+  <div class="icn i1"><svg width="24" height="24" viewBox="0 0 24 24" fill="#0A1832"><path d="M13.99 7.23h-4a5.75 5.75 0 00-5.75 5.75v5a3.75 3.75 0 003.75 3.75h8a3.75 3.75 0 003.75-3.75v-5a5.75 5.75 0 00-5.75-5.75zm-5.75 5.25a1.25 1.25 0 112.5 0 1.25 1.25 0 01-2.5 0zm1.75 5.25a.75.75 0 01-.53-1.28l4-4a.75.75 0 011.06 1.06l-4 4a.74.74 0 01-.53.22zm4.5 1a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5z"/></svg></div>
+  <div class="icn i2"><svg width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M13.99 16.35c-1.18 0-2.37-.32-3.52-.94a3.02 3.02 0 01-1.73-2.88v-3.8c0-1.07.53-2.07 1.41-2.69a3.2 3.2 0 011.83-.57c.38 0 .76.07 1.11.2.32.12.61.18.9.18.38-.02.73-.12 1.25-.31.15-.06.31-.11.49-.18v-.39a2.75 2.75 0 00-2.75-2.75h-8a2.75 2.75 0 00-2.75 2.75v14a2.75 2.75 0 002.75 2.75h8a2.75 2.75 0 002.75-2.75v-2.87c-.5.14-1.06.24-1.73.24h-.03z"/></svg></div>
+ </div>
+</div></section>
+
+<!-- ══════ ABOUT ══════ -->
+<section class="about" id="about"><div class="wrap g">
+ <div class="rv">
+  <div class="eyebrow">About us</div>
+  <h2>Why Taash Exists</h2>
+  <p>Taash was built to remove confusion around tax and money management in Nigeria. Many freelancers, workers, and small business owners struggle to track income, record expenses, and know what they owe. We simplify this by turning everyday transactions into clear, usable records you can trust without accounting knowledge. No guesswork. No spreadsheets. Just clarity.</p>
+ </div>
+ <div class="im rv"><img src="../../../public/about-hero.png" alt="Taash about"></div>
+</div></section>
+
+<!-- ══════ HOW IT WORKS · reinstated ══════ -->
+<section class="how"><div class="wrap">
+ <div class="rv"><div class="eyebrow">How it works</div>
+  <h2>How Taash Works</h2>
+  <p class="lede" style="margin-top:12px">Taash simplifies everything with AI—so you can stay compliant, stress-free, and in control of your money.</p></div>
+ <div class="steps rv">
+  <div class="st"><span class="n">01</span><img src="../../../public/connect-bank.svg" alt=""><h3>Connect account</h3><p>Link your bank or manually add transactions</p></div>
+  <div class="st"><span class="n">02</span><img src="../../../public/categorise-expenses.svg" alt=""><h3>Categorise expenses</h3><p>AI automatically sorts and tags your spending</p></div>
+  <div class="st"><span class="n">03</span><img src="../../../public/get-tax-estimate.svg" alt=""><h3>Get tax estimate</h3><p>See your tax obligations in real-time</p></div>
+  <div class="st"><span class="n">04</span><img src="../../../public/save-monthly.svg" alt=""><h3>Save monthly</h3><p>Set aside funds based on smart recommendations</p></div>
+ </div>
+</div></section>
+
+<!-- ══════ FEATURES ══════ -->
+<section class="feat" id="features"><div class="wrap">
+ <div class="rv"><div class="eyebrow">Features</div>
+  <h2>Do Less, Manage Better</h2>
+  <p class="lede" style="margin-top:12px">Powerful tools designed for creators, freelancers, and small businesses across Africa.</p></div>
+ <div class="grid rv">
+  <div class="cell"><img src="../../../public/categorise-expenses.svg" alt=""><h3>Track Income</h3><p>See all your earnings in one place, from salary, freelance work, or business payments.</p></div>
+  <div class="cell"><img src="../../../public/get-tax-estimate.svg" alt=""><h3>Record Expenses</h3><p>Keep clear records of your spending so nothing gets missed when tax time comes.</p></div>
+  <div class="cell"><img src="../../../public/save-monthly.svg" alt=""><h3>Know Your Tax</h3><p>Get a clear estimate of what you may owe based on your income and expenses.</p></div>
+  <div class="cell"><img src="../../../public/receipt-upload.svg" alt=""><h3>Stay Organised</h3><p>Generate invoices, save receipts and records so your finances are always clean and ready.</p></div>
+ </div>
+ <div class="foot rv"><a class="btn btn-d" href="#wait">Get Early Access</a></div>
+</div></section>
+
+<!-- ══════ WHO IT'S FOR ══════ -->
+<section class="who" id="who"><div class="wrap">
+ <div class="rv"><div class="eyebrow">Who it's for</div>
+  <h2>Built for the New Nigerian Workforce</h2>
+  <p class="lede" style="margin-top:12px">Whether you're freelancing, creating content, or running a small business — Taash keeps your finances clean and compliant.</p></div>
+ <div class="grid rv">
+  <div class="p"><img src="../../../public/freelancers.png" alt="Freelancers"><div class="ov"><h3>Freelancers</h3><p>Track income, record expenses, and stay tax-ready without stress.</p></div></div>
+  <div class="p"><img src="../../../public/creators.png" alt="Creators"><div class="ov"><h3>Creators</h3><p>Manage income from content, brand deals and platforms in one place.</p></div></div>
+  <div class="p"><img src="../../../public/smes.png" alt="Small Businesses"><div class="ov"><h3>Small Businesses</h3><p>Manage business income and expenses without complex accounting tools.</p></div></div>
+ </div>
+</div></section>
+
+<!-- ══════ TAX ESTIMATOR · DARK BAND ══════ -->
+<section class="est" id="est"><div class="wrap">
+ <div class="est-head rv">
+  <div class="tag">Nigeria Tax Act 2025 · in force 1 Jan 2026</div>
+  <h2>PAYE Tax Calculator</h2>
+  <p>Enter what you earn. We'll show what you owe under the 2026 rules as you type.</p>
+ </div>
+ <div class="est-g">
+  <div class="pane rv">
+   <div class="seg" role="group" aria-label="I am a"><button aria-pressed="true">Salary earner</button><button aria-pressed="false">Creator / Self-employed</button></div>
+   <div class="seg" role="group" aria-label="Figures are"><button aria-pressed="true">Monthly</button><button aria-pressed="false">Annual</button></div>
+   <div class="glab">Income</div>
+   <div class="frow"><label for="a1">Basic salary</label><div class="inp"><span>₦</span><input id="a1" value="450,000" inputmode="numeric"></div></div>
+   <div class="frow"><label for="a2">Housing allowance</label><div class="inp"><span>₦</span><input id="a2" value="180,000" inputmode="numeric"></div></div>
+   <div class="frow"><label for="a3">Transport allowance</label><div class="inp"><span>₦</span><input id="a3" value="90,000" inputmode="numeric"></div></div>
+   <div class="frow"><label for="a4">Other allowances<span class="sub">Medical, bonus, etc.</span></label><div class="inp"><span>₦</span><input id="a4" value="60,000" inputmode="numeric"></div></div>
+   <div class="glab">Reliefs <button type="button">What counts?</button></div>
+   <div class="frow"><label for="a5">Pension<span class="sub">8% of basic + housing + transport</span></label>
+    <div class="sl"><input id="a5" type="range" min="0" max="20" value="8" aria-valuetext="8 percent, ₦691,200"><span class="fig" style="font-weight:600;font-size:.875rem">8%</span></div></div>
+   <div class="frow"><label id="nl">National Housing Fund<span class="sub">2.5% of basic · ₦135,000/yr</span></label>
+    <button class="sw" role="switch" aria-checked="true" aria-labelledby="nl"></button></div>
+   <div class="frow"><label for="a6">NHIS</label><div class="inp"><span>₦</span><input id="a6" value="12,000" inputmode="numeric"></div></div>
+   <div class="frow" style="border:0;align-items:flex-start"><label for="a7">Annual rent paid<span class="sub">Relief = 20%, max ₦500,000</span></label>
+    <div><div class="inp"><span>₦</span><input id="a7" value="2,400,000" inputmode="numeric"></div>
+    <div class="warn">Capped at ₦500,000 above ₦2,500,000 rent.</div></div></div>
+  </div>
+  <aside class="rail rv" aria-label="Your result">
+   <div class="lab">You owe · 2026</div>
+   <div class="answer" id="ans"><span class="cur">₦</span><span id="digits">101,147</span></div>
+   <div class="asub">a month · <span class="fig">₦1,213,764</span> a year</div>
+   <div class="hr"></div>
+   <div class="ln"><span class="k">Gross income</span><span class="v">₦9,360,000</span></div>
+   <div class="ln"><span class="k">Total reliefs</span><span class="v" style="color:var(--green-400)">−₦1,450,200</span></div>
+   <div class="ln"><span class="k">Taxable income</span><span class="v">₦7,909,800</span></div>
+   <div class="ln"><span class="k">Effective rate</span><span class="v">13.0%</span></div>
+   <div class="hr"></div>
+   <div class="ln big"><span class="k">You keep</span><span class="v">₦598,003<span style="font-size:.75rem;color:var(--ink-500);font-weight:400">/mo</span></span></div>
+   <p class="legal">Estimate only, not tax advice. Nigeria Tax Act 2025 (in force 1 January 2026). Employment and self-employment income only. Figures as at 4 Sep 2026.</p>
+   <button class="disc">Reliefs breakdown</button>
+   <button class="disc" aria-expanded="true" style="color:#fff">How this compares to the pre-2026 PITA rules</button>
+   <div class="cmp">
+    <div class="cmpr"><div class="t"><span>2026 · Nigeria Tax Act</span><b>₦1,213,764</b></div><div class="bar"><i style="width:93%;background:linear-gradient(90deg,var(--blue-600),var(--blue-400));animation-delay:.1s"></i></div></div>
+    <div class="cmpr"><div class="t"><span>Pre-2026 · PITA rules</span><b>₦1,308,272</b></div><div class="bar"><i style="width:100%;background:var(--ink-600);animation-delay:.24s"></i></div></div>
+    <div class="delta">₦94,508 less under the 2026 rules</div>
+   </div>
+   <button class="disc">The 2026 tax bands</button>
+   <div style="height:14px"></div>
+   <a class="handoff" href="#wait">Taash tracks this all year — join the waitlist</a>
+  </aside>
+ </div>
+</div></section>
+
+<!-- ══════ APP DOWNLOAD · demoted ══════ -->
+<section class="app"><div class="wrap g">
+ <div class="rv">
+  <span class="chip">⏱ Coming soon</span>
+  <h2>The Taash App is launching soon.</h2>
+  <p>Your automated tax and finance assistant is coming soon to iOS and Android to help you stay compliant with zero stress. Join the waitlist to get early access, updates, and priority features as we roll out in Nigeria.</p>
+  <div class="badges"><img src="../../../public/app-store-badge.png" alt="Download on the App Store"><img src="../../../public/google-play-badge.png" alt="Get it on Google Play" style="height:52px"></div>
+ </div>
+ <img class="ph rv" src="../../../public/phone-hand.png" alt="Taash app on phone">
+</div></section>
+
+<!-- ══════ WAITLIST ══════ -->
+<section class="wait" id="wait"><div class="wrap"><div class="card rv">
+ <div class="eyebrow">Limited early access</div>
+ <h2>Get Early Access</h2>
+ <p>Be among the first to experience Taash. Early members get lifetime discounts and priority support.</p>
+ <div class="fld"><label for="fn">Full Name</label><input type="text" id="fn" placeholder="John Doe"></div>
+ <div class="fld"><label for="em">Email Address</label><input type="email" id="em" placeholder="john@example.com"></div>
+ <div class="fld"><label for="pr">Profession</label><input type="text" id="pr" placeholder="e.g., Freelance Designer, Content Creator"></div>
+ <div class="fld"><label for="mi">Monthly Income (optional)</label><input type="text" id="mi" placeholder="e.g., ₦200,000 - ₦500,000"></div>
+ <div class="chk"><input type="checkbox" id="pol"><label for="pol">I agree to receive updates about Taash and understand that my data will be handled according to the <a href="/privacy">privacy policy</a>.</label></div>
+ <div class="turn">Cloudflare Turnstile widget</div>
+ <a class="btn btn-d" href="#" style="width:100%">Join Waitlist</a>
+</div></div></section>
+
+<!-- ══════ RESOURCES ══════ -->
+<section class="res" id="res"><div class="wrap">
+ <div class="rv"><div class="eyebrow">Resources</div>
+  <h2>Learn About Taxes the Easy Way</h2>
+  <p class="lede" style="margin-top:12px">Tax compliance doesn't have to be confusing. Our guides break down complex topics into simple, actionable advice.</p></div>
+ <div class="rail2 rv">
+  <article><div class="im"></div><div class="meta">Compliance &amp; Law · 9 Jan 2026</div><h3>2025 Tax Reforms Explained. What Changed in Nigerian Tax Law</h3><p>The headline changes, and what they mean for your take-home.</p></article>
+  <article><div class="im"></div><div class="meta">Guides · 2 Jan 2026</div><h3>How to Register Your TIN in Nigeria. Step-by-Step Guide</h3><p>Everything you need, in the order you need it.</p></article>
+  <article><div class="im"></div><div class="meta">Deductions · 18 Dec 2025</div><h3>Top 5 Deductible Expenses for Freelancers in Nigeria</h3><p>What counts, what doesn't, and what to keep receipts for.</p></article>
+  <article><div class="im"></div><div class="meta">Basics · 4 Dec 2025</div><h3>Understanding PAYE as a Salaried Worker</h3><p>How your employer works out what to deduct each month.</p></article>
+ </div>
+ <div class="nav2 rv">
+  <button aria-label="Previous">←</button><button aria-label="Next">→</button>
+  <div class="dots"><i class="on" role="button" tabindex="0" aria-label="Slide 1"></i><i role="button" tabindex="0" aria-label="Slide 2"></i><i role="button" tabindex="0" aria-label="Slide 3"></i><i role="button" tabindex="0" aria-label="Slide 4"></i></div>
+  <a class="btn btn-s" href="/blogs" style="margin-left:auto">Visit Blog →</a>
+ </div>
+</div></section>
+
+<footer><div class="wrap">
+ <div class="top">
+  <img src="../../../public/logo-white.svg" alt="Taash" style="height:32px;width:auto">
+  <div class="soc">
+   <a href="#" aria-label="Instagram">◎</a><a href="#" aria-label="X">✕</a><a href="#" aria-label="LinkedIn">in</a><a href="#" aria-label="Facebook">f</a><a href="#" aria-label="YouTube">▶</a>
+  </div>
+ </div>
+ <div class="bot"><p style="margin:0">© 2026 Taash Technologies Inc. All rights reserved.</p>
+  <nav><a href="/terms">Terms &amp; Conditions</a><a href="/privacy">Privacy Policy</a></nav></div>
+</div></footer>
+
+<div id="chrome">
+ <span class="lb">Motion</span><button id="mOn" aria-pressed="true">On</button><button id="mOff">Off</button>
+ <span class="lb" style="margin-left:8px">Section marks</span><button id="kOn" aria-pressed="true">Show</button><button id="kOff">Hide</button>
+</div>
+
+<script>
+const html=document.documentElement; html.classList.add('marks');
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.1});
+document.querySelectorAll('.rv').forEach((el,i)=>{el.style.transitionDelay=(i%3)*80+'ms';io.observe(el)});
+const p=(a,b,v)=>{a.setAttribute('aria-pressed',v);b.setAttribute('aria-pressed',!v)};
+const mOn=document.getElementById('mOn'),mOff=document.getElementById('mOff');
+mOn.onclick=()=>{html.classList.remove('nomotion');p(mOn,mOff,true)};
+mOff.onclick=()=>{html.classList.add('nomotion');p(mOn,mOff,false)};
+const kOn=document.getElementById('kOn'),kOff=document.getElementById('kOff');
+kOn.onclick=()=>{html.classList.add('marks');p(kOn,kOff,true)};
+kOff.onclick=()=>{html.classList.remove('marks');p(kOn,kOff,false)};
+</script>
+</body></html>

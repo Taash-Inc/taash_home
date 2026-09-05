@@ -18,7 +18,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 const jetbrainsMono = JetBrains_Mono({
-  variable: '--font-mono',
+  variable: '--font-jetbrains-mono',
   subsets: ['latin'],
   display: 'swap',
 });
@@ -123,7 +123,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang='en'>
+    <html lang='en' className={`${spaceGrotesk.variable} ${jetbrainsMono.variable}`}>
       <head>
         <meta
           name='google-site-verification'
@@ -137,7 +137,7 @@ export default function RootLayout({
         <FAQSchema />
         <BreadcrumbSchema />
       </head>
-      <body className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
+      <body className='font-sans antialiased'>
         {children}
         <Analytics />
         <SpeedInsights />

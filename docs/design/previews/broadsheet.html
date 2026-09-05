@@ -1,0 +1,224 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Taash — Direction B · Broadsheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+ --paper:#fcf6ee;--paper2:#f5ece1;
+ --ink-200:#e7dbcc;--ink-300:#d4c6b2;--ink-400:#baa993;--ink-500:#9e8d75;
+ --ink-600:#84745e;--ink-700:#6c5e4b;--ink-800:#54493a;--ink-900:#3a3227;--ink-950:#241f17;
+ --blue-500:#3b82f6;--blue-700:#205ab9;--teal-700:#386485;
+ --green-700:#00742e;--red-600:#d52c29;--amber-100:#f8f0bb;
+ --surface:var(--paper);--sunken:var(--paper2);
+ --rule:var(--ink-200);--rule2:var(--ink-300);
+ --text:var(--ink-950);--text-2:var(--ink-700);--cap:var(--ink-600);
+ --accent:var(--blue-700);--positive:var(--green-700);--negative:var(--red-600);
+ --fd:'Space Grotesk',ui-sans-serif,system-ui,sans-serif;
+ --fs:'Source Serif 4',Charter,'Bitstream Charter',Georgia,serif;
+ --fu:ui-sans-serif,system-ui,-apple-system,sans-serif;
+ --fm:'JetBrains Mono',ui-monospace,Menlo,monospace;
+ color-scheme:light;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--surface);color:var(--text);font-family:var(--fs);
+ font-size:19px;line-height:1.62;-webkit-font-smoothing:antialiased}
+img{max-width:100%;display:block}
+h1,h2,h3{font-family:var(--fd);margin:0;letter-spacing:-.021em}
+h1{font-size:clamp(3rem,6.4vw,4.5rem);line-height:1.04;font-weight:700}
+h2{font-size:clamp(2rem,4vw,2.625rem);line-height:1.12;font-weight:600}
+h3{font-size:2rem;line-height:1.2;font-weight:600}
+.wrap{max-width:1180px;margin:0 auto;padding:0 32px}
+.measure{max-width:68ch}
+a{color:var(--accent);text-underline-offset:3px;text-decoration-thickness:1px}
+a:hover{text-decoration-thickness:2px}
+:is(a,button,input,[tabindex]):focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.ui{font-family:var(--fu)}
+.fig{font-family:var(--fm);font-variant-numeric:tabular-nums slashed-zero;font-size:.92em}
+.figd{font-family:var(--fd);font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1}
+
+header{border-bottom:1px solid var(--rule2)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:56px;gap:24px}
+.brand{font-family:var(--fd);font-weight:700;font-size:1.25rem;letter-spacing:-.03em;display:flex;align-items:center;gap:8px}
+.brand svg{width:20px;height:20px}
+.navlinks{display:none;gap:32px;font-family:var(--fu);font-size:.9375rem}
+@media(min-width:900px){.navlinks{display:flex}}
+.navlinks a{color:var(--text);text-decoration:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;font-family:var(--fu);font-weight:600;
+ font-size:.9375rem;padding:11px 20px;border-radius:4px;text-decoration:none;border:1px solid transparent;
+ cursor:pointer;min-height:44px}
+.btn-p{background:var(--accent);color:#fff}
+.btn-s{background:transparent;color:var(--text);border-color:var(--rule2)}
+
+.hero{padding:96px 0 0;border-bottom:1px solid var(--rule2)}
+.hero-g{display:grid;gap:40px}
+@media(min-width:1000px){.hero-g{grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:56px;align-items:end}}
+.kicker{font-family:var(--fu);font-size:.75rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+ color:var(--cap);padding-bottom:10px;border-bottom:2px solid var(--ink-950);display:inline-block;margin-bottom:28px}
+.stand{font-size:1.5rem;line-height:1.45;color:var(--text-2);margin:24px 0 32px;max-width:34ch}
+.cta{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:40px}
+.statfig{border-top:1px solid var(--rule2);padding-top:16px;margin-bottom:56px;display:flex;gap:32px;flex-wrap:wrap}
+.statfig div{display:flex;gap:10px;align-items:center}
+.statfig .n{font-family:var(--fd);font-variant-numeric:tabular-nums;font-size:1.5rem;font-weight:700}
+.statfig .c{font-family:var(--fu);font-size:.8125rem;color:var(--cap);max-width:16ch;line-height:1.3}
+.statfig img{width:36px;height:36px;border-radius:999px;object-fit:cover}
+.heroimg{align-self:stretch;min-height:420px;position:relative;overflow:hidden}
+.heroimg img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:58% 40%}
+
+.est{padding:160px 0;background:var(--sunken);border-top:1px solid var(--rule2);border-bottom:1px solid var(--rule2)}
+.sheet{max-width:760px;margin:0 auto}
+.sheet h2{margin-bottom:8px}
+.sheet .sub{font-family:var(--fu);font-size:.8125rem;letter-spacing:.1em;text-transform:uppercase;
+ color:var(--cap);margin:0 0 36px}
+.ctl{display:flex;gap:28px;flex-wrap:wrap;font-family:var(--fu);font-size:.9375rem;
+ padding-bottom:24px;border-bottom:2px solid var(--ink-950);margin-bottom:8px}
+.ctl fieldset{border:0;margin:0;padding:0;display:flex;align-items:center;gap:14px}
+.ctl legend{float:left;font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:var(--cap);margin-right:12px}
+.ctl label{display:inline-flex;align-items:center;gap:7px;cursor:pointer;min-height:44px}
+.ctl input{accent-color:var(--accent);width:17px;height:17px}
+table{width:100%;border-collapse:collapse;font-family:var(--fu);font-size:1rem}
+caption{text-align:left;font-family:var(--fu);font-size:.75rem;font-weight:700;letter-spacing:.14em;
+ text-transform:uppercase;color:var(--cap);padding:28px 0 8px}
+caption .r{float:right;text-transform:none;letter-spacing:0;font-weight:600;font-size:.8125rem}
+caption a{color:var(--accent)}
+th{text-align:left;font-weight:400;color:var(--text-2);padding:11px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+th .n{display:block;font-size:.8125rem;color:var(--cap);margin-top:2px}
+td{text-align:right;padding:11px 0;border-bottom:1px solid var(--rule);white-space:nowrap;
+ font-family:var(--fm);font-variant-numeric:tabular-nums;font-weight:500}
+tr.sum th,tr.sum td{border-bottom:0;border-top:2px solid var(--ink-950);font-weight:700;color:var(--text);padding-top:14px}
+tr.sum th{font-weight:700}
+.cell{display:inline-flex;align-items:center;gap:4px;border-bottom:1.5px solid var(--ink-500);padding:2px 2px 3px}
+.cell span{color:var(--cap)}
+.cell input{border:0;outline:0;background:transparent;color:var(--text);width:104px;text-align:right;
+ font-family:var(--fm);font-variant-numeric:tabular-nums;font-size:1rem;font-weight:500;padding:4px 0;min-height:32px}
+.cell input:focus{border-bottom-color:var(--accent)}
+.rangecell{display:flex;align-items:center;gap:10px;justify-content:flex-end}
+.rangecell input{accent-color:var(--accent);width:110px}
+.sw{width:44px;height:25px;border-radius:999px;background:var(--accent);border:0;position:relative;cursor:pointer}
+.sw::after{content:"";position:absolute;top:3px;left:22px;width:19px;height:19px;border-radius:999px;background:#fff}
+.warn{background:var(--amber-100);color:var(--ink-950);font-family:var(--fu);font-size:.75rem;
+ padding:6px 10px;border-radius:2px;margin-top:8px;display:inline-block}
+
+.result{border-top:4px solid var(--ink-950);margin-top:36px;padding-top:28px}
+.result .lab{font-family:var(--fu);font-size:.75rem;font-weight:700;letter-spacing:.14em;
+ text-transform:uppercase;color:var(--cap)}
+.big{font-family:var(--fd);font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1;
+ font-size:clamp(3.25rem,9vw,5rem);line-height:1;font-weight:700;letter-spacing:-.03em;margin:10px 0 4px}
+.big-sub{font-family:var(--fu);font-size:1rem;color:var(--text-2)}
+.rrow{display:flex;justify-content:space-between;font-family:var(--fu);font-size:1rem;
+ padding:9px 0;border-bottom:1px solid var(--rule)}
+.rrow b{font-family:var(--fm);font-variant-numeric:tabular-nums}
+.legal{font-family:var(--fu);font-size:.75rem;color:var(--text-2);line-height:1.55;margin:20px 0 0;max-width:60ch}
+.disc{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--rule2);
+ padding:15px 0;font:600 1rem/1.4 var(--fu);color:var(--text);cursor:pointer}
+.disc::before{content:"▾ ";color:var(--cap)}
+.cmp{font-family:var(--fu);font-size:1rem;padding:4px 0 20px;color:var(--text-2)}
+.cmp p{margin:0 0 8px}
+.cmp .em{color:var(--text);font-weight:600}
+.cmp .n{font-family:var(--fm);font-variant-numeric:tabular-nums;color:var(--text);font-weight:600}
+.cmp .note{font-size:.8125rem;color:var(--cap);font-style:italic}
+.handoff{border:2px solid var(--ink-950);padding:22px 24px;margin-top:32px;display:flex;
+ align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.handoff p{margin:0;font-size:1.125rem;max-width:34ch}
+.sticky{display:none}
+@media(max-width:999px){
+ .sticky{display:flex;position:sticky;top:0;z-index:40;justify-content:space-between;align-items:baseline;
+  gap:12px;background:var(--surface);border-bottom:2px solid var(--ink-950);padding:12px 0;margin-bottom:8px}
+ .sticky .l{font-family:var(--fu);font-size:.6875rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--cap)}
+ .sticky .v{font-family:var(--fd);font-variant-numeric:tabular-nums;font-size:1.5rem;font-weight:700}
+}
+.note{max-width:1180px;margin:0 auto;padding:22px 32px;font-family:var(--fu);font-size:.8125rem;color:var(--cap)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style></head><body>
+
+<header><div class="wrap nav">
+ <div class="brand"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 7l9 5 9-5-9-5-9 5z" fill="#4a7fa7"/><path d="M3 12l9 5 9-5M3 17l9 5 9-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Taash</div>
+ <nav class="navlinks"><a href="#">About</a><a href="#">Features</a><a href="#">Who It's For</a><a href="#">Resources</a></nav>
+ <a class="btn btn-p" href="#">Join Waitlist</a>
+</div></header>
+
+<section class="hero"><div class="wrap hero-g">
+ <div>
+  <div class="kicker">Made for Nigerian Freelancers</div>
+  <h1>Effortless Tax and Finance for Nigeria's New Workforce</h1>
+  <p class="stand">Taash turns daily income and spending into clear records that are always tax-ready. Built for freelancers, workers, creators, and small businesses in Nigeria.</p>
+  <div class="cta"><a class="btn btn-p" href="#">Join Waitlist</a><a class="btn btn-s" href="#est">Try Tax Estimator</a></div>
+  <div class="statfig">
+   <div><img src="../../../public/avatar-small.png" alt=""><span class="c">Example: a Lagos freelancer's monthly estimate</span></div>
+   <div><span class="n">₦101,147</span><span class="c">tax due each month</span></div>
+   <div><span class="n">₦598,003</span><span class="c">kept each month</span></div>
+  </div>
+ </div>
+ <div class="heroimg"><img src="../../../public/hero-image.png" alt="A Nigerian freelancer working on a laptop"></div>
+</div></section>
+
+<section class="est" id="est"><div class="wrap"><div class="sheet">
+ <div class="sticky"><span class="l">Tax due</span><span class="v">₦101,147<span style="font-size:.8125rem;font-weight:400">/mo</span></span></div>
+ <h2>PAYE Tax Calculator</h2>
+ <p class="sub">Nigeria Tax Act 2025 · in force 1 January 2026</p>
+
+ <div class="ctl">
+  <fieldset><legend>I am a</legend>
+   <label><input type="radio" name="who" checked> Salary earner</label>
+   <label><input type="radio" name="who"> Creator / Self-employed</label></fieldset>
+  <fieldset><legend>Figures</legend>
+   <label><input type="radio" name="per" checked> Monthly</label>
+   <label><input type="radio" name="per"> Annual</label></fieldset>
+ </div>
+
+ <table>
+  <caption>Income</caption>
+  <tbody>
+   <tr><th scope="row"><label for="b1">Basic salary</label></th><td><span class="cell"><span>₦</span><input id="b1" value="450,000" inputmode="numeric"></span></td></tr>
+   <tr><th scope="row"><label for="b2">Housing allowance</label></th><td><span class="cell"><span>₦</span><input id="b2" value="180,000" inputmode="numeric"></span></td></tr>
+   <tr><th scope="row"><label for="b3">Transport allowance</label></th><td><span class="cell"><span>₦</span><input id="b3" value="90,000" inputmode="numeric"></span></td></tr>
+   <tr><th scope="row"><label for="b4">Other allowances<span class="n">Medical, bonus, etc.</span></label></th><td><span class="cell"><span>₦</span><input id="b4" value="60,000" inputmode="numeric"></span></td></tr>
+   <tr class="sum"><th scope="row">Gross annual income</th><td>₦9,360,000</td></tr>
+  </tbody>
+ </table>
+
+ <table>
+  <caption>Less reliefs <span class="r"><a href="#">What counts?</a></span></caption>
+  <tbody>
+   <tr><th scope="row"><label for="b5">Pension<span class="n">8% of basic, housing and transport</span></label></th>
+    <td><span class="rangecell"><input id="b5" type="range" min="0" max="20" value="8" aria-valuetext="8 percent, ₦691,200">691,200</span></td></tr>
+   <tr><th scope="row" id="nhfl">National Housing Fund<span class="n">2.5% of basic salary</span></th>
+    <td><span class="rangecell"><button class="sw" role="switch" aria-checked="true" aria-labelledby="nhfl"></button>135,000</span></td></tr>
+   <tr><th scope="row"><label for="b6">NHIS</label></th><td><span class="cell"><span>₦</span><input id="b6" value="12,000" inputmode="numeric"></span></td></tr>
+   <tr><th scope="row"><label for="b7">Annual rent paid<span class="n">Relief = 20% of rent, max ₦500,000</span></label>
+    <span class="warn">Capped at ₦500,000 above ₦2,500,000 rent</span></th>
+    <td><span class="cell"><span>₦</span><input id="b7" value="2,400,000" inputmode="numeric"></span><div style="margin-top:6px;color:var(--positive)">480,000</div></td></tr>
+   <tr class="sum"><th scope="row">Total reliefs</th><td style="color:var(--positive)">−₦1,450,200</td></tr>
+   <tr class="sum" style="border-top:1px solid var(--rule)"><th scope="row">Taxable income</th><td>₦7,909,800</td></tr>
+  </tbody>
+ </table>
+
+ <div class="result">
+  <div class="lab">Tax due · 2026</div>
+  <div class="big">₦101,147</div>
+  <div class="big-sub">per month · <span class="fig">₦1,213,764</span> per year</div>
+  <div style="margin-top:24px">
+   <div class="rrow"><span>Effective rate</span><b>13.0%</b></div>
+   <div class="rrow"><span>Take-home, after tax and statutory deductions</span><b style="color:var(--positive)">₦598,003<span style="font-family:var(--fu);font-size:.8125rem;color:var(--cap)">/mo</span></b></div>
+  </div>
+  <p class="legal">Estimate only, not tax advice. Calculated under the Nigeria Tax Act 2025 (in force 1 January 2026). Covers employment and self-employment income only. Figures as at 4 September 2026.</p>
+ </div>
+
+ <div style="margin-top:32px">
+  <button class="disc" aria-expanded="true">How this compares to the pre-2026 PITA rules</button>
+  <div class="cmp">
+   <p>Under the pre-2026 rules you would have paid <span class="n">₦1,308,272</span>.</p>
+   <p>Under the 2026 Nigeria Tax Act you pay <span class="n">₦1,213,764</span> — <span class="em" style="color:var(--positive)">₦94,508 less</span>.</p>
+   <p class="note">The pre-2026 rules no longer apply. This comparison is shown for context only.</p>
+  </div>
+  <button class="disc" style="border-bottom:1px solid var(--rule2)" aria-expanded="false">The 2026 tax bands</button>
+ </div>
+
+ <div class="handoff">
+  <p>Taash keeps this worksheet up to date all year.</p>
+  <a class="btn btn-p" href="#">Join the waitlist</a>
+ </div>
+</div></div></section>
+
+<p class="note"><b>Direction B · Broadsheet</b> — standalone preview. Body is Source Serif 4 (SIL OFL); display is Space Grotesk. Figures use the corrected pension base (8% of basic + housing + transport, PRA 2014 s.4(1)).</p>
+</body></html>

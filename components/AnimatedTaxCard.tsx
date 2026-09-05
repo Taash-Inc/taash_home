@@ -19,7 +19,7 @@ const taxScenarios = [
     period: 'vs September',
     positive: false,
   },
-  { label: 'Quarterly Tax Due', amount: 142500, change: 5, period: 'vs Q2 2024', positive: true },
+  { label: 'Quarterly Tax Due', amount: 142500, change: 5, period: 'vs last quarter', positive: true },
   {
     label: 'Quarterly Tax Due',
     amount: 128700,
@@ -27,7 +27,7 @@ const taxScenarios = [
     period: 'vs last quarter',
     positive: false,
   },
-  { label: 'Annual Tax Estimate', amount: 547200, change: 18, period: 'vs 2023', positive: true },
+  { label: 'Annual Tax Estimate', amount: 547200, change: 18, period: 'vs last year', positive: true },
   {
     label: 'Annual Tax Estimate',
     amount: 489600,
@@ -49,8 +49,18 @@ const taxScenarios = [
 export default function AnimatedTaxCard() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [paused, setPaused] = useState(false);
 
   useEffect(() => {
+    // WCAG 2.2.2: content that updates automatically needs a way to stop it. A visible
+    // pause control would change the hero, which is out of scope, so this stops for anyone
+    // who has asked for reduced motion and pauses on hover or keyboard focus. A fully
+    // conformant fix still needs a visible control — see docs/design/00-audit.md C5.
+    const reduced =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced || paused) return;
+
     const interval = setInterval(() => {
       setIsAnimating(true);
 
@@ -61,7 +71,7 @@ export default function AnimatedTaxCard() {
     }, 4000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [paused]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-NG').format(amount);
@@ -70,7 +80,14 @@ export default function AnimatedTaxCard() {
   const current = taxScenarios[currentIndex];
 
   return (
-    <div className='absolute top-24 -left-2 sm:-left-8 md:-left-4 bg-white rounded-2xl shadow-xl p-3 sm:p-4 z-20 min-w-40 sm:min-w-[180px]'>
+    <div
+      className='absolute top-24 -left-2 sm:-left-8 md:-left-4 bg-white rounded-2xl shadow-xl p-3 sm:p-4 z-20 min-w-40 sm:min-w-[180px]'
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocusCapture={() => setPaused(true)}
+      onBlurCapture={() => setPaused(false)}
+      tabIndex={0}
+      aria-label='Example tax figures, updating periodically'>
       <p
         className={`text-xs text-text-gray mb-1 transition-opacity duration-300 ${
           isAnimating ? 'opacity-0' : 'opacity-100'
@@ -85,7 +102,7 @@ export default function AnimatedTaxCard() {
       </p>
       <p
         className={`text-xs flex items-center gap-1 mt-1 transition-all duration-300 ${
-          current.positive ? 'text-green-500' : 'text-red-500'
+          current.positive ? 'text-green-700' : 'text-red-600'
         } ${isAnimating ? 'opacity-0' : 'opacity-100'}`}>
         <svg
           width='10'

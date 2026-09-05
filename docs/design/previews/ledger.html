@@ -1,0 +1,251 @@
+<!doctype html><html lang="en" data-theme="light"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Taash — Direction A · Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+ --blue-50:#f0f7ff;--blue-100:#e1eeff;--blue-200:#c7deff;--blue-300:#a5c8ff;--blue-400:#76abff;
+ --blue-500:#3b82f6;--blue-600:#2c70df;--blue-700:#205ab9;--blue-950:#061d44;
+ --teal-400:#82b1d6;--teal-500:#5f95be;--teal-600:#4a7fa7;--teal-700:#386485;
+ --green-100:#d8f6dd;--green-400:#22c55e;--green-700:#00742e;
+ --red-100:#ffe6e2;--red-500:#f7463f;--red-600:#d52c29;
+ --amber-100:#f8f0bb;--amber-500:#ffea66;
+ --ink-50:#f6f7f8;--ink-100:#ebedf0;--ink-200:#dadce1;--ink-300:#c3c7ce;--ink-400:#a6abb4;
+ --ink-500:#8a8f99;--ink-600:#717680;--ink-700:#5c6068;--ink-800:#474a51;--ink-900:#303338;
+ --ink-950:#1e1f23;--ink-1000:#0f172a;
+ --surface:#fff;--raised:var(--ink-50);--sunken:var(--ink-100);
+ --rule:var(--ink-200);--rule-strong:var(--ink-300);
+ --text:var(--ink-1000);--text-2:var(--ink-700);--text-3:var(--ink-600);
+ --accent:var(--blue-600);--on-accent:#fff;--focus:var(--blue-500);
+ --positive:var(--green-700);--negative:var(--red-600);
+ --warn-bg:var(--amber-100);--warn-tx:var(--ink-1000);
+ --shadow-rail:0 1px 2px rgb(15 23 42/.04),0 8px 24px -12px rgb(15 23 42/.12);
+ --font-d:'Space Grotesk',ui-sans-serif,system-ui,sans-serif;
+ --font-m:'JetBrains Mono',ui-monospace,Menlo,monospace;
+ --font-s:ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+ color-scheme:light;
+}
+html[data-theme="dark"]{
+ --surface:#0f172a;--raised:#1e1f23;--sunken:#0b1220;--rule:#303338;--rule-strong:#474a51;
+ --text:#f6f7f8;--text-2:var(--ink-300);--text-3:var(--ink-400);
+ --accent:var(--blue-500);--on-accent:#fff;--focus:var(--blue-400);
+ --positive:var(--green-400);--negative:var(--red-500);
+ --warn-bg:#3a3305;--warn-tx:var(--amber-100);
+ --shadow-rail:0 1px 2px rgb(0 0 0/.4),0 8px 32px -12px rgb(0 0 0/.6);
+ color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--surface);color:var(--text);font-family:var(--font-s);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+img{max-width:100%;display:block}
+h1,h2,h3{font-family:var(--font-d);margin:0;letter-spacing:-.022em}
+h1{font-size:clamp(2.5rem,5.2vw,3.5rem);line-height:1.08;font-weight:700}
+h2{font-size:clamp(1.75rem,3.2vw,2rem);line-height:1.15;font-weight:700}
+h3{font-size:1.5rem;line-height:1.25;font-weight:600}
+.fig{font-family:var(--font-m);font-variant-numeric:tabular-nums slashed-zero;letter-spacing:-.01em}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+a{color:var(--accent)}
+:is(a,button,input,[tabindex]):focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+/* header */
+header{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--surface) 92%,transparent);
+ backdrop-filter:blur(10px);border-bottom:1px solid var(--rule)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:64px;gap:24px}
+.brand{font-family:var(--font-d);font-weight:700;font-size:1.25rem;letter-spacing:-.03em;display:flex;align-items:center;gap:8px}
+.brand svg{width:22px;height:22px}
+.navlinks{display:none;gap:28px;font-size:.875rem}
+@media(min-width:900px){.navlinks{display:flex}}
+.navlinks a{color:var(--text);text-decoration:none;font-weight:500}
+.navlinks a:hover{color:var(--accent)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--font-s);
+ font-weight:600;font-size:.9375rem;padding:11px 18px;border-radius:8px;border:1px solid transparent;
+ cursor:pointer;text-decoration:none;min-height:44px}
+.btn-p{background:var(--accent);color:var(--on-accent)}
+.btn-s{background:transparent;color:var(--text);border-color:var(--rule-strong)}
+.tog{background:transparent;border:1px solid var(--rule);border-radius:8px;width:44px;height:44px;
+ display:grid;place-items:center;cursor:pointer;color:var(--text-2)}
+
+/* hero */
+.hero{padding:88px 0 96px;border-bottom:1px solid var(--rule)}
+.hero-g{display:grid;gap:48px;align-items:center}
+@media(min-width:960px){.hero-g{grid-template-columns:1fr 1fr;gap:64px}}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:.8125rem;font-weight:600;
+ letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:20px}
+.eyebrow::before{content:"";width:24px;height:1px;background:var(--rule-strong)}
+.lede{font-size:1.25rem;line-height:1.55;color:var(--text-2);margin:20px 0 28px;max-width:46ch}
+.cta{display:flex;gap:12px;flex-wrap:wrap}
+.heroart{position:relative;aspect-ratio:4/3;border-radius:14px;overflow:hidden;background:var(--ink-1000)}
+.heroart img{width:100%;height:100%;object-fit:cover;object-position:60% 45%;
+ filter:grayscale(1) contrast(1.05);mix-blend-mode:luminosity;opacity:.85}
+.heroart::after{content:"";position:absolute;inset:0;background:linear-gradient(145deg,#0f172a 0%,rgba(74,127,167,.55) 100%);mix-blend-mode:color}
+.exchip{position:absolute;left:16px;bottom:16px;right:16px;z-index:2;background:var(--surface);
+ border:1px solid var(--rule);border-radius:10px;padding:12px 14px;box-shadow:var(--shadow-rail)}
+.exchip .lab{font-size:.6875rem;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);font-weight:600}
+.exchip .row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:4px}
+.exchip .v{font-size:1.375rem;font-weight:700}
+.exchip .d{font-size:.8125rem;color:var(--positive);font-weight:600}
+.proof{display:flex;align-items:center;gap:10px;margin-top:24px;font-size:.875rem;color:var(--text-3)}
+.proof img{width:32px;height:32px;border-radius:999px;object-fit:cover}
+
+/* estimator */
+.est{padding:120px 0;background:var(--sunken);border-bottom:1px solid var(--rule)}
+.est-head{max-width:640px;margin-bottom:40px}
+.est-head p{color:var(--text-2);font-size:1.125rem;margin:12px 0 0}
+.tag{display:inline-flex;align-items:center;gap:8px;font-size:.75rem;font-weight:600;letter-spacing:.05em;
+ text-transform:uppercase;color:var(--teal-700);background:var(--surface);border:1px solid var(--rule);
+ padding:5px 10px;border-radius:6px;margin-bottom:16px}
+html[data-theme="dark"] .tag{color:var(--teal-400)}
+.est-g{display:grid;gap:24px}
+@media(min-width:1000px){.est-g{grid-template-columns:58fr 42fr;gap:32px;align-items:start}}
+.pane{background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:24px}
+.seg{display:flex;gap:0;border:1px solid var(--rule-strong);border-radius:8px;overflow:hidden;margin-bottom:14px}
+.seg button{flex:1;background:transparent;border:0;padding:11px 8px;font:600 .875rem/1 var(--font-s);
+ color:var(--text-2);cursor:pointer;min-height:44px}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--on-accent)}
+.grouplab{font-size:.6875rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+ color:var(--text-3);margin:26px 0 10px;display:flex;justify-content:space-between;align-items:center}
+.grouplab button{background:none;border:0;font:600 .75rem/1 var(--font-s);color:var(--accent);
+ cursor:pointer;text-transform:none;letter-spacing:0;padding:6px}
+.frow{display:flex;align-items:center;justify-content:space-between;gap:16px;
+ padding:11px 0;border-bottom:1px solid var(--rule)}
+.frow:last-child{border-bottom:0}
+.frow label{font-size:.9375rem;color:var(--text-2)}
+.frow .sub{display:block;font-size:.75rem;color:var(--text-3);margin-top:2px}
+.inp{display:flex;align-items:center;gap:6px;border:1px solid var(--rule-strong);border-radius:6px;
+ padding:7px 10px;background:var(--surface);min-width:150px}
+.inp span{color:var(--text-3);font-size:.9375rem}
+.inp input{border:0;outline:0;background:transparent;color:var(--text);width:100%;text-align:right;
+ font-family:var(--font-m);font-variant-numeric:tabular-nums;font-size:.9375rem;font-weight:500}
+.slider{display:flex;align-items:center;gap:12px;min-width:150px}
+.slider input{flex:1;accent-color:var(--accent);height:22px}
+.sw{width:46px;height:26px;border-radius:999px;background:var(--accent);border:0;position:relative;cursor:pointer;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:23px;width:20px;height:20px;border-radius:999px;background:#fff}
+.warn{background:var(--warn-bg);color:var(--warn-tx);font-size:.75rem;padding:7px 10px;border-radius:6px;margin-top:8px}
+
+/* rail */
+.rail{background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:24px;
+ box-shadow:var(--shadow-rail)}
+@media(min-width:1000px){.rail{position:sticky;top:88px}}
+.rail .lab{font-size:.6875rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-3)}
+.answer{font-family:var(--font-m);font-variant-numeric:tabular-nums;font-size:clamp(2.5rem,6.5vw,3.5rem);
+ font-weight:700;line-height:1;letter-spacing:-.03em;margin:10px 0 6px}
+.answer-sub{font-size:.9375rem;color:var(--text-2)}
+.hr{height:1px;background:var(--rule);margin:20px 0}
+.line{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:6px 0;font-size:.875rem}
+.line .k{color:var(--text-2)}
+.line .v{font-family:var(--font-m);font-variant-numeric:tabular-nums;font-weight:500}
+.line.big .v{font-size:1.25rem;font-weight:700;color:var(--positive)}
+.disc{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--rule);
+ padding:12px 0;font:600 .875rem/1.4 var(--font-s);color:var(--text-2);cursor:pointer}
+.disc::before{content:"▸ ";color:var(--text-3)}
+.cmp{padding:14px;background:var(--sunken);border-radius:8px;margin-top:12px}
+.cmpr{margin-bottom:12px}
+.cmpr .t{display:flex;justify-content:space-between;font-size:.8125rem;margin-bottom:5px;color:var(--text-2)}
+.cmpr .t b{font-family:var(--font-m);font-variant-numeric:tabular-nums;color:var(--text);font-weight:600}
+.bar{height:9px;border-radius:2px;background:var(--rule)}
+.bar i{display:block;height:100%;border-radius:2px}
+.delta{font-size:.875rem;font-weight:600;color:var(--positive);text-align:center;padding-top:4px}
+.legal{font-size:.75rem;color:var(--text-3);line-height:1.5;margin:16px 0}
+.handoff{display:block;width:100%;text-align:center;background:var(--accent);color:var(--on-accent);
+ border-radius:8px;padding:14px;font-weight:600;text-decoration:none;font-size:.9375rem;min-height:44px}
+.mob-bar{display:none}
+@media(max-width:999px){
+ .mob-bar{display:flex;position:sticky;bottom:0;z-index:40;align-items:center;justify-content:space-between;
+  gap:12px;background:var(--surface);border-top:1px solid var(--rule-strong);padding:12px 16px;
+  box-shadow:0 -8px 24px -12px rgb(15 23 42/.2);margin:0 -24px}
+ .mob-bar .lab{font-size:.6875rem}
+ .mob-bar .v{font-family:var(--font-m);font-variant-numeric:tabular-nums;font-size:1.375rem;font-weight:700}
+}
+.note{max-width:1200px;margin:0 auto;padding:20px 24px;font-size:.8125rem;color:var(--text-3);border-top:1px solid var(--rule)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style></head><body>
+
+<header><div class="wrap nav">
+ <div class="brand"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 7l9 5 9-5-9-5-9 5z" fill="#4a7fa7"/><path d="M3 12l9 5 9-5M3 17l9 5 9-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Taash</div>
+ <nav class="navlinks"><a href="#">About</a><a href="#">Features</a><a href="#">Who It's For</a><a href="#">Resources</a></nav>
+ <div style="display:flex;gap:10px;align-items:center">
+  <button class="tog" id="tt" aria-label="Switch to dark theme"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></button>
+  <a class="btn btn-p" href="#">Join Waitlist</a>
+ </div>
+</div></header>
+
+<section class="hero"><div class="wrap hero-g">
+ <div>
+  <div class="eyebrow">Made for Nigerian Freelancers</div>
+  <h1>Effortless Tax and Finance for Nigeria's New Workforce</h1>
+  <p class="lede">Taash turns daily income and spending into clear records that are always tax-ready. Built for freelancers, workers, creators, and small businesses in Nigeria.</p>
+  <div class="cta"><a class="btn btn-p" href="#">Join Waitlist</a><a class="btn btn-s" href="#est">Try Tax Estimator</a></div>
+  <div class="proof"><img src="../../../public/avatar-small.png" alt="">Built with freelancers in Lagos, Abuja and Port Harcourt</div>
+ </div>
+ <div class="heroart">
+  <img src="../../../public/hero-image.png" alt="A Nigerian freelancer working on a laptop">
+  <div class="exchip">
+   <div class="lab">Example · Monthly tax estimate</div>
+   <div class="row"><span class="v fig">₦101,147</span><span class="d fig">12.9% effective</span></div>
+  </div>
+ </div>
+</div></section>
+
+<section class="est" id="est"><div class="wrap">
+ <div class="est-head">
+  <div class="tag">Nigeria Tax Act 2025 · in force 1 Jan 2026</div>
+  <h2>PAYE Tax Calculator</h2>
+  <p>Enter what you earn. We'll show what you owe under the 2026 rules as you type.</p>
+ </div>
+ <div class="est-g">
+  <div class="pane">
+   <div class="seg" role="group" aria-label="I am a"><button aria-pressed="true">Salary earner</button><button aria-pressed="false">Creator / Self-employed</button></div>
+   <div class="seg" role="group" aria-label="Figures are"><button aria-pressed="true">Monthly</button><button aria-pressed="false">Annual</button></div>
+
+   <div class="grouplab">Income</div>
+   <div class="frow"><label for="a1">Basic salary</label><div class="inp"><span>₦</span><input id="a1" value="450,000" inputmode="numeric"></div></div>
+   <div class="frow"><label for="a2">Housing allowance</label><div class="inp"><span>₦</span><input id="a2" value="180,000" inputmode="numeric"></div></div>
+   <div class="frow"><label for="a3">Transport allowance</label><div class="inp"><span>₦</span><input id="a3" value="90,000" inputmode="numeric"></div></div>
+   <div class="frow"><label for="a4">Other allowances <span class="sub">Medical, bonus, etc.</span></label><div class="inp"><span>₦</span><input id="a4" value="60,000" inputmode="numeric"></div></div>
+
+   <div class="grouplab">Reliefs <button type="button">What counts?</button></div>
+   <div class="frow"><label for="a5">Pension <span class="sub">8% of basic + housing + transport</span></label>
+    <div class="slider"><input id="a5" type="range" min="0" max="20" value="8" aria-valuetext="8 percent, ₦691,200"><span class="fig" style="font-weight:600;font-size:.875rem">8%</span></div></div>
+   <div class="frow"><label id="nhfl">National Housing Fund <span class="sub">2.5% of basic · ₦135,000/yr</span></label>
+    <button class="sw" role="switch" aria-checked="true" aria-labelledby="nhfl"></button></div>
+   <div class="frow"><label for="a6">NHIS</label><div class="inp"><span>₦</span><input id="a6" value="12,000" inputmode="numeric"></div></div>
+   <div class="frow" style="border:0;align-items:flex-start"><label for="a7">Annual rent paid <span class="sub">Relief = 20%, max ₦500,000</span></label>
+    <div><div class="inp"><span>₦</span><input id="a7" value="2,400,000" inputmode="numeric"></div>
+    <div class="warn">Relief capped at ₦500,000 above ₦2,500,000 rent.</div></div></div>
+  </div>
+
+  <aside class="rail" aria-label="Your result">
+   <div class="lab">You owe · 2026</div>
+   <div class="answer">₦101,147</div>
+   <div class="answer-sub">a month · <span class="fig">₦1,213,764</span> a year</div>
+   <div class="hr"></div>
+   <div class="line"><span class="k">Gross income</span><span class="v">₦9,360,000</span></div>
+   <div class="line"><span class="k">Total reliefs</span><span class="v" style="color:var(--positive)">−₦1,450,200</span></div>
+   <div class="line"><span class="k">Taxable income</span><span class="v">₦7,909,800</span></div>
+   <div class="line"><span class="k">Effective rate</span><span class="v">13.0%</span></div>
+   <div class="hr"></div>
+   <div class="line big"><span class="k">You keep</span><span class="v">₦598,003<span style="font-size:.75rem;color:var(--text-3);font-weight:400">/mo</span></span></div>
+   <p class="legal">Estimate only, not tax advice. Calculated under the Nigeria Tax Act 2025 (in force 1 January 2026). Employment and self-employment income only. Figures as at 4 Sep 2026.</p>
+   <button class="disc">Reliefs breakdown</button>
+   <button class="disc" aria-expanded="true" style="color:var(--text)">How this compares to the pre-2026 PITA rules</button>
+   <div class="cmp">
+    <div class="cmpr"><div class="t"><span>2026 · Nigeria Tax Act</span><b>₦1,213,764</b></div><div class="bar"><i style="width:93%;background:var(--accent)"></i></div></div>
+    <div class="cmpr"><div class="t"><span>Pre-2026 · PITA rules</span><b>₦1,308,272</b></div><div class="bar"><i style="width:100%;background:var(--ink-400)"></i></div></div>
+    <div class="delta">₦94,508 less under the 2026 rules</div>
+   </div>
+   <button class="disc">The 2026 tax bands</button>
+   <div style="height:14px"></div>
+   <a class="handoff" href="#">Taash tracks this all year — join the waitlist</a>
+  </aside>
+ </div>
+ <div class="mob-bar"><div><div class="lab">You owe</div><div class="v">₦101,147<span style="font-size:.75rem;font-weight:400;color:var(--text-3)">/mo</span></div></div><a class="btn btn-p" href="#">Join waitlist</a></div>
+</div></section>
+
+<p class="note"><b>Direction A · Ledger</b> — standalone preview. Figures are computed with the corrected pension base (8% of basic + housing + transport per PRA 2014 s.4(1)), so the result differs from production by design. Toggle the theme with the moon button.</p>
+
+<script>
+const r=document.documentElement, b=document.getElementById('tt');
+b.onclick=()=>{const d=r.dataset.theme==='dark';r.dataset.theme=d?'light':'dark';
+ b.setAttribute('aria-label',d?'Switch to dark theme':'Switch to light theme')};
+</script>
+</body></html>

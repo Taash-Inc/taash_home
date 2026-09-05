@@ -1,23 +1,41 @@
 'use client';
 
 import Image from 'next/image';
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export default function AppDownload() {
   const [rotation, setRotation] = useState(0);
+  const sectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    // Spin clockwise every 5 seconds
-    const interval = setInterval(() => {
-      setRotation((prev) => prev + 360);
-    }, 4000);
+    // Same 4s clockwise spin as before, but it now respects prefers-reduced-motion and
+    // stops once the section scrolls out of view rather than running forever.
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (media.matches) return;
 
-    return () => clearInterval(interval);
+    let interval: ReturnType<typeof setInterval> | undefined;
+    const start = () => {
+      interval ??= setInterval(() => setRotation((prev) => prev + 360), 4000);
+    };
+    const stop = () => {
+      clearInterval(interval);
+      interval = undefined;
+    };
+
+    const el = sectionRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => (e.isIntersecting ? start() : stop()), {
+      threshold: 0,
+    });
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      stop();
+    };
   }, []);
 
   return (
-    <section id='download' className='py-20 bg-white'>
+    <section ref={sectionRef} id='download' className='py-20 bg-white'>
       <div className='max-w-7xl mx-auto px-6'>
         {/* Grey background card */}
         <div className='bg-[#f1f5f9] rounded-3xl overflow-hidden relative'>
@@ -83,33 +101,33 @@ export default function AppDownload() {
               </h2>
               <p className='text-lg text-text-gray max-w-lg mx-auto lg:mx-0 mb-8'>
                 Your automated tax and finance assistant is coming soon to iOS and Android to help
-                you stay compliant with zero stress.Join the waitlist to get early access, updates,
+                you stay compliant with zero stress. Join the waitlist to get early access, updates,
                 and priority features as we roll out in Nigeria.
               </p>
 
               {/* App Store Badges */}
               <div className='flex flex-row items-center justify-center lg:justify-start gap-3 sm:gap-4'>
                 {/* App Store */}
-                <Link href='#' aria-label='Download on the App Store'>
+                <div>
                   <Image
                     src='/app-store-badge.png'
-                    alt='Download on the App Store'
-                    width={140}
+                    alt='Coming soon to the App Store'
+                    width={125}
                     height={42}
-                    className='h-[36px] sm:h-[42px] w-auto'
+                    className='h-auto w-[107px] sm:w-[125px]'
                   />
-                </Link>
+                </div>
 
                 {/* Google Play - bigger to visually match App Store */}
-                <Link href='#' aria-label='Get it on Google Play'>
+                <div>
                   <Image
                     src='/google-play-badge.png'
-                    alt='Get it on Google Play'
-                    width={140}
-                    height={42}
-                    className='h-[50px] sm:h-[60px] w-auto'
+                    alt='Coming soon to Google Play'
+                    width={155}
+                    height={60}
+                    className='h-auto w-[129px] sm:w-[155px]'
                   />
-                </Link>
+                </div>
               </div>
             </div>
 
