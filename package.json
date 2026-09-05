@@ -13,12 +13,12 @@
   },
   "dependencies": {
     "@marsidev/react-turnstile": "^1.6.1",
-    "@portabletext/react": "^6.0.2",
-    "@sanity/client": "^7.27.0",
+    "@portabletext/react": "^8.0.1",
+    "@sanity/client": "^8.5.0",
     "@sanity/image-url": "^2.1.1",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
-    "next": "^16.0.11",
+    "next": "^16.3.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
@@ -29,10 +29,10 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "eslint": "^9.39.5",
-    "eslint-config-next": "^16.0.11",
+    "eslint-config-next": "^16.3.4",
     "tailwindcss": "^4.3.3",
     "typescript": "^5",
-    "vitest": "^5.0.0"
+    "vitest": "^4.1.11"
   },
   "engines": {
     "node": ">=22.12.0"
