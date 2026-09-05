@@ -73,22 +73,55 @@ export default function WaitlistForm() {
   };
 
   return (
-    <section id='waitlist' className='border-b border-ink-200 bg-ink-50 py-24'>
-      <div className='mx-auto max-w-xl px-6'>
-        <div className='rounded-2xl border border-ink-200 bg-white p-8 md:p-10'>
-          <p className='mb-4 flex items-center gap-2.5 text-xs font-bold tracking-[0.12em] text-ink-700 uppercase'>
-            <span aria-hidden='true' className='h-px w-6 bg-ink-300' />
-            Limited early access
-          </p>
-          <h2 className='text-[clamp(1.5rem,3vw,1.75rem)] font-bold tracking-tight text-ink-1000'>
-            Get Early Access
-          </h2>
-          <p className='mt-2 text-[0.9375rem] text-ink-700'>
-            Be among the first to experience Taash. Early members get lifetime discounts and
-            priority support.
-          </p>
+    <section id='waitlist' className='relative overflow-hidden py-20'>
+      {/* Wavy blue background, as before */}
+      <div className='absolute inset-0 bg-light-blue' aria-hidden='true'>
+        <svg
+          className='absolute top-0 left-0 h-full w-full'
+          viewBox='0 0 1440 600'
+          fill='none'
+          xmlns='http://www.w3.org/2000/svg'
+          preserveAspectRatio='none'>
+          <path
+            d='M0 100C200 50 400 150 600 100C800 50 1000 150 1200 100C1400 50 1440 100 1440 100V600H0V100Z'
+            fill='#bfdbfe'
+            fillOpacity='0.3'
+          />
+          <path
+            d='M0 200C300 150 500 250 800 200C1100 150 1300 250 1440 200V600H0V200Z'
+            fill='#93c5fd'
+            fillOpacity='0.2'
+          />
+        </svg>
+      </div>
 
-          <form onSubmit={handleSubmit} className='mt-7'>
+      <div className='relative mx-auto max-w-xl px-6'>
+        <div className='rounded-3xl bg-white p-8 shadow-xl md:p-12'>
+          <div className='mb-6 flex justify-center'>
+            {/* Same #C5E2FF pill as before. The text was #3b82f6, which measures 2.75:1 on
+                it and fails AA; brand-700 is visually near-identical at 4.87:1. */}
+            <span className='inline-flex items-center gap-2 rounded-full bg-[#C5E2FF] px-4 py-2 text-sm font-medium text-brand-700'>
+              <svg width='18' height='18' viewBox='0 0 18 18' fill='none' aria-hidden='true'>
+                <path
+                  fillRule='evenodd'
+                  clipRule='evenodd'
+                  d='M3.63853 1.18603C3.91191 0.354656 5.08791 0.354656 5.36128 1.18603L5.96841 3.03141L7.81378 3.63853C8.64516 3.91191 8.64516 5.08791 7.81378 5.36128L5.96841 5.96841L5.36128 7.81378C5.08791 8.64516 3.91191 8.64516 3.63853 7.81378L3.03141 5.96841L1.18603 5.36128C0.354656 5.08791 0.354656 3.91191 1.18603 3.63853L3.03141 3.03141L3.63853 1.18603ZM11.023 2.76928C11.3332 1.82691 12.6667 1.82691 12.9768 2.76928L13.9057 5.59416L16.7305 6.52303C17.6729 6.83316 17.6729 8.16666 16.7305 8.47678L13.9057 9.40566L12.9768 12.2305C12.6667 13.1733 11.3332 13.1733 11.023 12.2305L10.0942 9.40566L7.26928 8.47678C6.32653 8.16666 6.32653 6.83316 7.26928 6.52303L10.0942 5.59416L11.023 2.76928ZM6.89803 9.46228C6.61303 8.59603 5.38678 8.59603 5.10178 9.46228L4.41778 11.5428L2.33728 12.2272C1.47103 12.5122 1.47103 13.7377 2.33728 14.0227L4.41778 14.707L5.10216 16.7875C5.38716 17.6538 6.61266 17.6538 6.89766 16.7875L7.58203 14.707L9.66253 14.0227C10.5288 13.7377 10.5288 12.5122 9.66253 12.2272L7.58203 11.5428L6.89803 9.46228Z'
+                  fill='#0A1832'
+                />
+              </svg>
+              Limited Early Access
+            </span>
+          </div>
+
+          <div className='mb-8 text-center'>
+            <h2 className='text-2xl font-bold text-ink-1000 md:text-3xl'>Get Early Access</h2>
+            <p className='mt-3 text-ink-700'>
+              Be among the first to experience Taash. Early members get lifetime discounts and
+              priority support.
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit}>
             <TextField
               label='Full Name'
               name='fullName'
