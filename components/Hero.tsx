@@ -27,11 +27,11 @@ export default function Hero() {
 
             {/* Headline */}
             <h1 className='text-4xl md:text-5xl lg:text-[3.25rem] font-bold text-primary-dark leading-[1.15] tracking-tight'>
-              Effortless Tax and
+              Effortless Tax and{' '}
               <br />
-              Finance for
+              Finance for{' '}
               <br />
-              Nigeria's New
+              Nigeria&apos;s New{' '}
               <br />
               Workforce
             </h1>
@@ -39,7 +39,7 @@ export default function Hero() {
             {/* Subheadline */}
             <p className='text-lg text-text-gray max-w-md leading-relaxed'>
               Taash turns daily income and spending into clear records that are always
-              tax-ready.Built for freelancers, workers, creators, and small businesses in Nigeria.
+              tax-ready. Built for freelancers, workers, creators, and small businesses in Nigeria.
             </p>
 
             {/* CTA Buttons */}
@@ -95,7 +95,6 @@ export default function Hero() {
                     width={40}
                     height={40}
                     className='object-cover'
-                    unoptimized
                   />
                 </div>
               </div>

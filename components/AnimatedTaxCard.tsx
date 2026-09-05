@@ -85,7 +85,7 @@ export default function AnimatedTaxCard() {
       </p>
       <p
         className={`text-xs flex items-center gap-1 mt-1 transition-all duration-300 ${
-          current.positive ? 'text-green-500' : 'text-red-500'
+          current.positive ? 'text-green-700' : 'text-red-600'
         } ${isAnimating ? 'opacity-0' : 'opacity-100'}`}>
         <svg
           width='10'

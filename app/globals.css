@@ -49,7 +49,7 @@
   --color-border-light: var(--border-light);
 
   --font-sans: var(--font-space-grotesk);
-  --font-mono: var(--font-mono);
+  --font-mono: var(--font-jetbrains-mono);
 }
 
 body {

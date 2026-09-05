@@ -83,7 +83,7 @@ export default function AppDownload() {
               </h2>
               <p className='text-lg text-text-gray max-w-lg mx-auto lg:mx-0 mb-8'>
                 Your automated tax and finance assistant is coming soon to iOS and Android to help
-                you stay compliant with zero stress.Join the waitlist to get early access, updates,
+                you stay compliant with zero stress. Join the waitlist to get early access, updates,
                 and priority features as we roll out in Nigeria.
               </p>
 
