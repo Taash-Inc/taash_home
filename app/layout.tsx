@@ -11,16 +11,21 @@ import type { Metadata, Viewport } from 'next';
 import { JetBrains_Mono, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 
+// latin-ext is preloaded too because ₦ (U+20A6) lives in it: the hero's figures need that file
+// on every load, and without a preload it was only discovered after first layout.
 const spaceGrotesk = Space_Grotesk({
   variable: '--font-space-grotesk',
-  subsets: ['latin'],
+  subsets: ['latin', 'latin-ext'],
   display: 'swap',
 });
 
+// Not preloaded: the mono face only appears below the fold (labels, the estimator), so a
+// preload competed with the hero for early bandwidth. It still loads on first layout.
 const jetbrainsMono = JetBrains_Mono({
   variable: '--font-jetbrains-mono',
   subsets: ['latin'],
   display: 'swap',
+  preload: false,
 });
 
 // Base URL for the site

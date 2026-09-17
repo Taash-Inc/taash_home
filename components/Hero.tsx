@@ -72,6 +72,10 @@ export default function Hero() {
                     src='/hero-image.png'
                     alt='African freelancer working on laptop'
                     fill
+                    // The ellipse is 750px wide from lg and scale-150 draws the photo at 1125px.
+                    // Without sizes it defaulted to 100vw, so wide desktops fetched 1920w.
+                    // Below lg it stays 100vw, which is what phones were already served.
+                    sizes='(min-width: 1024px) 1125px, 100vw'
                     className='object-cover scale-150'
                     style={{ objectPosition: '66% 60%' }}
                     priority

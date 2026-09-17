@@ -140,7 +140,6 @@ export default function AppDownload() {
                   width={533}
                   height={584}
                   className='w-full h-auto -scale-x-100'
-                  priority
                 />
                 {/* Taash Logo centered on phone screen */}
                 <div
