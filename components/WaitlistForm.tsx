@@ -20,6 +20,25 @@ export default function WaitlistForm() {
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const turnstileRef = useRef<TurnstileInstance>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const [turnstileWanted, setTurnstileWanted] = useState(false);
+
+  // Turnstile used to mount on page load for every visitor. On a mid-range Android profile its
+  // challenge downloaded ~540 KB and blocked the main thread for 1.3–1.5 s between roughly 3 s
+  // and 9 s after load — when people start tapping — for a form most visitors never reach.
+  // It now mounts once the form is within one screen of the viewport.
+  useEffect(() => {
+    const form = formRef.current;
+    if (!form || turnstileWanted) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) setTurnstileWanted(true);
+      },
+      { rootMargin: '100% 0px' }
+    );
+    observer.observe(form);
+    return () => observer.disconnect();
+  }, [turnstileWanted]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -121,7 +140,7 @@ export default function WaitlistForm() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit}>
+          <form ref={formRef} onSubmit={handleSubmit}>
             <TextField
               label='Full Name'
               name='fullName'
@@ -189,15 +208,18 @@ export default function WaitlistForm() {
               ) : null}
             </div>
 
-            <div className='mt-5 flex justify-center'>
-              <Turnstile
-                ref={turnstileRef}
-                siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'}
-                onSuccess={(token) => setTurnstileToken(token)}
-                onError={() => setTurnstileToken(null)}
-                onExpire={() => setTurnstileToken(null)}
-                options={{ theme: 'light' }}
-              />
+            {/* min-h holds the widget's 65px so nothing below moves when it mounts. */}
+            <div className='mt-5 flex min-h-[65px] justify-center'>
+              {turnstileWanted ? (
+                <Turnstile
+                  ref={turnstileRef}
+                  siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'}
+                  onSuccess={(token) => setTurnstileToken(token)}
+                  onError={() => setTurnstileToken(null)}
+                  onExpire={() => setTurnstileToken(null)}
+                  options={{ theme: 'light' }}
+                />
+              ) : null}
             </div>
 
             {/* The button is no longer disabled while Turnstile loads. A control that is
