@@ -1,36 +1,9 @@
+import { verifyTurnstile } from '@/lib/turnstile';
 import { NextRequest, NextResponse } from 'next/server';
 
 // Sanitize input: trim whitespace, limit length, remove potential XSS
 function sanitize(input: string, maxLength: number = 255): string {
   return input.trim().slice(0, maxLength).replace(/[<>]/g, ''); // Remove angle brackets to prevent basic XSS
-}
-
-// Verify Turnstile token
-async function verifyTurnstile(token: string): Promise<boolean> {
-  const secretKey = process.env.TURNSTILE_SECRET_KEY;
-
-  if (!secretKey || secretKey === 'your-secret-key-here') {
-    // Skip verification in development if not configured
-    console.warn('Turnstile not configured, skipping verification');
-    return true;
-  }
-
-  try {
-    const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        secret: secretKey,
-        response: token,
-      }),
-    });
-
-    const data = await response.json();
-    return data.success === true;
-  } catch (error) {
-    console.error('Turnstile verification error:', error);
-    return false;
-  }
 }
 
 // Add contact to Loops.so
@@ -194,7 +167,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Please complete the CAPTCHA' }, { status: 400 });
     }
 
-    const isValidToken = await verifyTurnstile(turnstileToken);
+    const isValidToken = await verifyTurnstile(turnstileToken, {
+      secret: process.env.TURNSTILE_SECRET_KEY,
+      isDevelopment: process.env.NODE_ENV === 'development',
+    });
     if (!isValidToken) {
       return NextResponse.json({ error: 'CAPTCHA verification failed' }, { status: 400 });
     }
