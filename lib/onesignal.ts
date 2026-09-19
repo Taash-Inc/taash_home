@@ -66,14 +66,14 @@ async function call(
  * external_id (the email), which OneSignal upserts, and the email carries an idempotency key
  * derived from the address, so a retry after a partial success never sends a second copy.
  */
-export async function syncWaitlistContact(
+/** Creates or updates the OneSignal user for a waitlist signup. No email is sent. */
+export async function upsertWaitlistUser(
   contact: WaitlistContact,
   { appId, apiKey, fetchImpl = fetch }: Config
 ): Promise<SyncResult> {
   if (!appId || !apiKey) {
     return { success: false, error: 'OneSignal is not configured (ONESIGNAL_APP_ID / ONESIGNAL_API_KEY)' };
   }
-
   try {
     const user = await call(fetchImpl, `${API}/apps/${appId}/users`, apiKey, {
       identity: { external_id: contact.email },
@@ -83,8 +83,29 @@ export async function syncWaitlistContact(
     if (!user.ok) {
       return { success: false, error: `create user: HTTP ${user.status} ${JSON.stringify(user.data.errors ?? user.data)}` };
     }
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
 
-    const email = await call(fetchImpl, `${API}/notifications?c=email`, apiKey, {
+/**
+ * Adds a waitlist signup to OneSignal and sends the confirmation email.
+ *
+ * Both steps are safe to repeat, so a failed sync is retried whole: the user is keyed by
+ * external_id (the email), which OneSignal upserts, and the email carries an idempotency key
+ * derived from the address, so a retry after a partial success never sends a second copy.
+ */
+export async function syncWaitlistContact(
+  contact: WaitlistContact,
+  config: Config
+): Promise<SyncResult> {
+  const user = await upsertWaitlistUser(contact, config);
+  if (!user.success) return user;
+
+  const { appId, apiKey, fetchImpl = fetch } = config;
+  try {
+    const email = await call(fetchImpl, `${API}/notifications?c=email`, apiKey!, {
       app_id: appId,
       template_id: WAITLIST_CONFIRMATION_TEMPLATE_ID,
       email_to: [contact.email],
@@ -96,7 +117,6 @@ export async function syncWaitlistContact(
     if (!email.ok || !email.data.id) {
       return { success: false, error: `send confirmation: HTTP ${email.status} ${JSON.stringify(email.data.errors ?? email.data)}` };
     }
-
     return { success: true };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };

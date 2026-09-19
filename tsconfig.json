@@ -11,6 +11,10 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
+    // scripts/ runs directly under `node --env-file=... scripts/x.ts`, which needs the .ts
+    // extension on relative imports. Next.js compiles the app itself, so this only relaxes
+    // what the typechecker accepts.
+    "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
     "incremental": true,
     "plugins": [
