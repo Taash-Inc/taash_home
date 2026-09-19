@@ -3,6 +3,7 @@ import {
   WAITLIST_CONFIRMATION_TEMPLATE_ID,
   deterministicUuid,
   syncWaitlistContact,
+  upsertWaitlistUser,
   type WaitlistContact,
 } from './onesignal';
 
@@ -96,6 +97,21 @@ describe('syncWaitlistContact', () => {
       success: false,
       error: 'fetch failed',
     });
+  });
+});
+
+describe('upsertWaitlistUser', () => {
+  it('creates the user without sending any email', async () => {
+    const fetchImpl = replies([201, { identity: {} }]);
+    expect(await upsertWaitlistUser(CONTACT, { ...CONFIG, fetchImpl })).toEqual({ success: true });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(sent(fetchImpl, 0).url).toBe('https://api.onesignal.com/apps/app-uuid/users');
+  });
+
+  it('reports a failure instead of throwing', async () => {
+    const fetchImpl = replies([403, { errors: ['Forbidden'] }]);
+    const result = await upsertWaitlistUser(CONTACT, { ...CONFIG, fetchImpl });
+    expect(result.success).toBe(false);
   });
 });
 
