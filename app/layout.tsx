@@ -59,11 +59,14 @@ export const metadata: Metadata = {
   authors: [{ name: 'Taash Technologies Inc.' }],
   creator: 'Taash Technologies Inc.',
   publisher: 'Taash Technologies Inc.',
+  // icon.svg, icon-192.png and icon-512.png were a placeholder "T" until v=3; the version
+  // bump makes browsers drop their cached copy. favicon.ico already carried the real mark.
   icons: {
     icon: [
       { url: '/favicon.ico?v=2', sizes: '48x48', type: 'image/x-icon' },
-      { url: '/icon.svg?v=2', type: 'image/svg+xml', sizes: 'any' },
+      { url: '/icon.svg?v=3', type: 'image/svg+xml', sizes: 'any' },
     ],
+    apple: [{ url: '/apple-touch-icon.png?v=3', sizes: '180x180', type: 'image/png' }],
   },
   formatDetection: {
     email: false,
