@@ -1,7 +1,7 @@
 {
   "crons": [
     {
-      "path": "/api/loops-retry",
+      "path": "/api/onesignal-retry",
       "schedule": "0 2 * * *"
     }
   ],

@@ -1,119 +1,10 @@
 import { verifyTurnstile } from '@/lib/turnstile';
-import { NextRequest, NextResponse } from 'next/server';
+import { syncSignup } from '@/lib/waitlist-sync';
+import { after, NextRequest, NextResponse } from 'next/server';
 
 // Sanitize input: trim whitespace, limit length, remove potential XSS
 function sanitize(input: string, maxLength: number = 255): string {
   return input.trim().slice(0, maxLength).replace(/[<>]/g, ''); // Remove angle brackets to prevent basic XSS
-}
-
-// Add contact to Loops.so
-async function addToLoops(data: {
-  email: string;
-  firstName: string;
-  lastName: string;
-  profession: string;
-  monthlyIncome: string | null;
-}): Promise<{ success: boolean; error?: string }> {
-  const apiKey = process.env.LOOPS_API_KEY;
-
-  if (!apiKey) {
-    console.warn('Loops API key not configured, skipping');
-    return { success: true }; // Don't block signup if Loops isn't configured
-  }
-
-  try {
-    const response = await fetch('https://app.loops.so/api/v1/contacts/create', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        email: data.email,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        source: 'waitlist',
-        userGroup: 'waitlist',
-        // Custom properties - these will be created in Loops automatically
-        profession: data.profession,
-        monthlyIncome: data.monthlyIncome || '',
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('Loops API error:', response.status, errorData);
-      // Don't fail the signup if Loops fails
-      return { success: false, error: errorData?.message || 'Loops API error' };
-    }
-
-    return { success: true };
-  } catch (error) {
-    console.error('Loops API error:', error);
-    return { success: false, error: 'Failed to connect to Loops' };
-  }
-}
-
-// Store failed Loops sync in Supabase for retry
-async function storeFailedLoopsSync(data: {
-  email: string;
-  firstName: string;
-  lastName: string;
-  profession: string;
-  monthlyIncome: string | null;
-  errorMessage: string;
-}): Promise<void> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    console.error('Supabase not configured, cannot store failed sync');
-    return;
-  }
-
-  try {
-    await fetch(`${supabaseUrl}/rest/v1/failed_loops_syncs`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: supabaseKey,
-        Authorization: `Bearer ${supabaseKey}`,
-      },
-      body: JSON.stringify({
-        email: data.email,
-        first_name: data.firstName,
-        last_name: data.lastName,
-        profession: data.profession,
-        monthly_income: data.monthlyIncome,
-        error_message: data.errorMessage,
-        retry_count: 0,
-      }),
-    });
-  } catch (error) {
-    console.error('Failed to store failed Loops sync:', error);
-  }
-}
-
-// Send Slack notification for failed Loops sync
-async function sendSlackAlert(data: { email: string; errorMessage: string }): Promise<void> {
-  const webhookUrl = process.env.SLACK_WEBHOOK_URL;
-
-  if (!webhookUrl) {
-    console.warn('Slack webhook not configured, skipping alert');
-    return;
-  }
-
-  try {
-    await fetch(webhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text: `⚠️ *Loops Sync Failed*\n• Email: ${data.email}\n• Error: ${data.errorMessage}\n• Stored for retry in \`failed_loops_syncs\` table`,
-      }),
-    });
-  } catch (error) {
-    console.error('Failed to send Slack alert:', error);
-  }
 }
 
 // Insert into Supabase using REST API
@@ -219,47 +110,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to join waitlist' }, { status: 500 });
     }
 
-    // Add to Loops.so for email marketing (non-blocking)
-    // Split full name into first and last name
+    // Add to OneSignal and send the confirmation email once the response has gone out, so the
+    // visitor never waits on it. `after` keeps the function alive until this finishes; the old
+    // Loops call was an un-awaited promise, which Vercel can cut off once the response is sent.
     const nameParts = sanitizedData.fullName.split(' ');
-    const firstName = nameParts[0] || '';
-    const lastName = nameParts.slice(1).join(' ') || '';
-
-    // Try to add to Loops, store failure if it fails
-    const loopsData = {
-      email: sanitizedData.email,
-      firstName,
-      lastName,
-      profession: sanitizedData.profession,
-      monthlyIncome: sanitizedData.monthlyIncome,
-    };
-
-    addToLoops(loopsData)
-      .then(async (result) => {
-        if (!result.success && result.error) {
-          // Store failure for retry
-          await storeFailedLoopsSync({
-            ...loopsData,
-            errorMessage: result.error,
-          });
-          // Send Slack notification
-          await sendSlackAlert({
-            email: loopsData.email,
-            errorMessage: result.error,
-          });
-        }
+    after(() =>
+      syncSignup({
+        email: sanitizedData.email,
+        firstName: nameParts[0] || '',
+        lastName: nameParts.slice(1).join(' ') || '',
+        profession: sanitizedData.profession,
+        monthlyIncome: sanitizedData.monthlyIncome,
       })
-      .catch(async (err) => {
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        await storeFailedLoopsSync({
-          ...loopsData,
-          errorMessage,
-        });
-        await sendSlackAlert({
-          email: loopsData.email,
-          errorMessage,
-        });
-      });
+    );
 
     return NextResponse.json(
       { message: 'Successfully joined the waitlist!', data },
