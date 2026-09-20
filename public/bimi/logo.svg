@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The Taash mark for BIMI, served at https://taash.tax/bimi/logo.svg and referenced by the
+  default._bimi.taash.tax TXT record. Mailbox providers fetch it to draw the sender avatar.
+
+  This is a separate copy of the mark in public/icon.svg on purpose. BIMI requires the SVG Tiny
+  Portable/Secure profile, which bans CSS style elements, so the dark-mode media query
+  that icon.svg uses to go white on dark backgrounds cannot appear here. Keep the two in
+  step by hand; do not replace this file with icon.svg.
+
+  The profile also requires version="1.2", baseProfile="tiny-ps", a <title>, a square viewBox and
+  no scripts or external references. Gmail additionally wants at least 96x96 stated in absolute
+  pixels, and masks the avatar to a circle - hence the padding around the mark.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" version="1.2" baseProfile="tiny-ps" viewBox="0 0 112 112" width="112" height="112">
+<title>Taash</title>
+<rect x="0" y="0" width="112" height="112" fill="#FFFFFF"/>
+<g transform="translate(20.17 14.86)">
+<path d="M0 22.5176C0.00019746 21.5066 1.07296 20.8564 1.96973 21.3232L36.1816 39.1338L69.6836 21.6924C70.5804 21.2256 71.6533 21.8766 71.6533 22.8877V59.2812C71.6533 60.2923 70.5804 60.9433 69.6836 60.4766L35.4707 42.6641L1.96973 60.1064C1.07288 60.5734 0 59.9222 0 58.9111V22.5176Z" fill="#0A1832"/>
+<circle cx="35.4431" cy="13.4587" r="13.4587" fill="#4A7FA7"/>
+<circle cx="35.6814" cy="68.8259" r="13.4587" fill="#4A7FA7"/>
+</g>
+</svg>
