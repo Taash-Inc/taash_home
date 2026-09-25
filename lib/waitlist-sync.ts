@@ -1,4 +1,4 @@
-import { ensurePreferenceToken } from './email-preferences';
+import { ensurePreferenceToken, leaveWaitlist, preferencesConfig } from './email-preferences';
 import { syncWaitlistContact, type SyncResult, type WaitlistContact } from './onesignal';
 
 /**
@@ -140,15 +140,78 @@ export async function recordRetryFailure(sync: FailedSync, errorMessage: string)
   });
 }
 
+/** Whether an address is still on the waitlist, or null when Supabase can't say. */
+async function isOnWaitlist(email: string): Promise<boolean | null> {
+  const db = supabase();
+  if (!db) return null;
+  try {
+    const response = await fetch(
+      `${db.url}/rest/v1/waitlist?email=eq.${encodeURIComponent(email)}&select=email`,
+      { headers: headers(db.key) }
+    );
+    if (!response.ok) return null;
+    const rows: unknown = await response.json();
+    return Array.isArray(rows) && rows.length > 0;
+  } catch {
+    return null;
+  }
+}
+
+export type RetryOutcome = 'synced' | 'left' | 'failed';
+
+/**
+ * Retries one parked signup (app/api/onesignal-retry). Someone who has left the waitlist is
+ * never put back: the waitlist is checked just before the sync, and again after it in case they
+ * left while it ran, in which case their removal is finished rather than undone.
+ */
+export async function retryFailedSync(sync: FailedSync): Promise<RetryOutcome> {
+  const onList = await isOnWaitlist(sync.email);
+  if (onList === null) {
+    await recordRetryFailure(sync, 'could not check the waitlist before retrying');
+    return 'failed';
+  }
+  if (!onList) {
+    await deleteFailedSync(String(sync.id));
+    return 'left';
+  }
+
+  const result = await syncToOneSignal({
+    email: sync.email,
+    firstName: sync.first_name ?? '',
+    lastName: sync.last_name ?? '',
+    profession: sync.profession ?? '',
+    monthlyIncome: sync.monthly_income,
+  });
+  if (!result.success) {
+    await recordRetryFailure(sync, result.error);
+    return 'failed';
+  }
+
+  // Only a definite "gone" undoes the sync. If Supabase can't answer a moment after it said
+  // they were on the list, that is still the likelier truth.
+  if ((await isOnWaitlist(sync.email)) === false) {
+    const removed = await leaveWaitlist(sync.email, preferencesConfig());
+    if (!removed.success) {
+      await postToSlack(
+        `⚠️ *A retry re-added someone who left the waitlist*\n• Email: ${sync.email}\n• Error: ${removed.error}\nRemove them from OneSignal by hand.`
+      );
+    }
+    return 'left';
+  }
+  await deleteFailedSync(String(sync.id));
+  return 'synced';
+}
+
 export async function postRetrySummary(results: {
   total: number;
   succeeded: number;
   failed: number;
+  left: number;
   maxRetriesReached: number;
 }): Promise<void> {
   if (results.total === 0) return;
   const emoji = results.failed === 0 ? '✅' : '⚠️';
   await postToSlack(
-    `${emoji} *OneSignal Retry Summary*\n• Total processed: ${results.total}\n• Succeeded: ${results.succeeded}\n• Failed: ${results.failed}\n• Max retries reached: ${results.maxRetriesReached}`
+    `${emoji} *OneSignal Retry Summary*\n• Total processed: ${results.total}\n• Succeeded: ${results.succeeded}\n• Failed: ${results.failed}\n• Left the waitlist (not re-added): ${results.left}\n• Max retries reached: ${results.maxRetriesReached}`
   );
 }
