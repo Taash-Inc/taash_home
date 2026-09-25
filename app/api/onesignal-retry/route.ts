@@ -1,11 +1,4 @@
-import {
-  MAX_RETRIES,
-  deleteFailedSync,
-  getFailedSyncs,
-  postRetrySummary,
-  recordRetryFailure,
-  syncToOneSignal,
-} from '@/lib/waitlist-sync';
+import { MAX_RETRIES, getFailedSyncs, postRetrySummary, retryFailedSync } from '@/lib/waitlist-sync';
 import { NextRequest, NextResponse } from 'next/server';
 
 // Verify cron secret (optional but recommended for security)
@@ -19,8 +12,9 @@ function verifyCronSecret(request: NextRequest): boolean {
 
 /**
  * Nightly retry of signups whose OneSignal sync failed (see vercel.json). A retry repeats the
- * whole sync, which is safe: the user upsert is keyed by email and the confirmation email is
- * deduplicated by OneSignal, so nobody gets it twice.
+ * whole sync, which is safe: the OneSignal user is only created if missing, the confirmation
+ * email is deduplicated by OneSignal, and anyone who has left the waitlist is skipped
+ * (retryFailedSync).
  */
 export async function GET(request: NextRequest) {
   if (!verifyCronSecret(request)) {
@@ -35,22 +29,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ message: 'No failed syncs to retry', processed: 0 });
   }
 
-  const results = { total: failedSyncs.length, succeeded: 0, failed: 0, maxRetriesReached: 0 };
+  const results = { total: failedSyncs.length, succeeded: 0, failed: 0, left: 0, maxRetriesReached: 0 };
 
   for (const sync of failedSyncs) {
-    const result = await syncToOneSignal({
-      email: sync.email,
-      firstName: sync.first_name ?? '',
-      lastName: sync.last_name ?? '',
-      profession: sync.profession ?? '',
-      monthlyIncome: sync.monthly_income,
-    });
-
-    if (result.success) {
-      await deleteFailedSync(String(sync.id));
-      results.succeeded++;
-    } else {
-      await recordRetryFailure(sync, result.error);
+    const outcome = await retryFailedSync(sync);
+    if (outcome === 'synced') results.succeeded++;
+    else if (outcome === 'left') results.left++;
+    else {
       if ((sync.retry_count ?? 0) + 1 >= MAX_RETRIES) results.maxRetriesReached++;
       results.failed++;
     }

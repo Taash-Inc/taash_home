@@ -5,8 +5,7 @@ import {
   SoftwareApplicationSchema,
   WebsiteSchema,
 } from '@/components/StructuredData';
-import { Analytics } from '@vercel/analytics/next';
-import { SpeedInsights } from '@vercel/speed-insights/next';
+import SiteAnalytics from '@/components/SiteAnalytics';
 import type { Metadata, Viewport } from 'next';
 import { JetBrains_Mono, Space_Grotesk } from 'next/font/google';
 import './globals.css';
@@ -147,8 +146,7 @@ export default function RootLayout({
       </head>
       <body className='font-sans antialiased'>
         {children}
-        <Analytics />
-        <SpeedInsights />
+        <SiteAnalytics />
       </body>
     </html>
   );
