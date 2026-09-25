@@ -53,13 +53,19 @@ const rows: { email: string; token: string }[] = await response.json();
 console.log(`1. Tags: ${rows.length} signups with a preference token`);
 
 if (!apply) {
-  console.log('   would set pref_token and delete last_name on each OneSignal user (subscriptions untouched)');
+  console.log('   would delete last_name, then set pref_token, on each OneSignal user (subscriptions untouched)');
 } else {
   let tagged = 0;
   const missing: string[] = [];
   const failures: string[] = [];
   for (const row of rows) {
-    const result = await setUserTags(row.email, { pref_token: row.token, last_name: '' }, { appId, apiKey });
+    // Two requests, the deletion first: OneSignal won't add a tag to a user who is at the plan's
+    // per-user tag limit until one has been deleted in a separate request.
+    const cleared = await setUserTags(row.email, { last_name: '' }, { appId, apiKey });
+    await pause();
+    const result = cleared.success
+      ? await setUserTags(row.email, { pref_token: row.token }, { appId, apiKey })
+      : cleared;
     if (result.success) tagged++;
     else if (result.error.includes('HTTP 404')) missing.push(row.email);
     else failures.push(`${row.email}: ${result.error}`);
