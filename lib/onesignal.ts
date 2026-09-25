@@ -107,13 +107,23 @@ function userUrl(appId: string, email: string): string {
   return `${API}/apps/${appId}/users/by/external_id/${encodeURIComponent(email)}`;
 }
 
-/** Creates or updates the OneSignal user for a waitlist signup. No email is sent. */
-export async function upsertWaitlistUser(
+/**
+ * Creates the OneSignal user for a waitlist signup, unless it already exists. No email is sent.
+ *
+ * An existing user is left untouched: the nightly retry lands here after a partial sync, by
+ * which time the person may have unsubscribed, and sending enabled: true again would
+ * resubscribe them. So enabled: true only ever reaches a user being created.
+ */
+export async function addWaitlistUser(
   contact: OneSignalContact,
   { appId, apiKey, fetchImpl = fetch }: OneSignalConfig
 ): Promise<SyncResult> {
   if (!appId || !apiKey) return NOT_CONFIGURED;
   try {
+    const existing = await call(fetchImpl, 'GET', userUrl(appId, contact.email), apiKey);
+    if (existing.ok) return { success: true };
+    if (existing.status !== 404) return failed('view user', existing);
+
     const user = await call(fetchImpl, 'POST', `${API}/apps/${appId}/users`, apiKey, {
       identity: { external_id: contact.email },
       properties: { tags: tagsFor(contact) },
@@ -128,15 +138,15 @@ export async function upsertWaitlistUser(
 /**
  * Adds a waitlist signup to OneSignal and sends the confirmation email.
  *
- * Both steps are safe to repeat, so a failed sync is retried whole: the user is keyed by
- * external_id (the email), which OneSignal upserts, and the email carries an idempotency key
- * derived from the address, so a retry after a partial success never sends a second copy.
+ * Both steps are safe to repeat, so a failed sync is retried whole: the user is only created if
+ * missing, and the email carries an idempotency key derived from the address, so a retry after
+ * a partial success never sends a second copy.
  */
 export async function syncWaitlistContact(
   contact: OneSignalContact,
   config: OneSignalConfig
 ): Promise<SyncResult> {
-  const user = await upsertWaitlistUser(contact, config);
+  const user = await addWaitlistUser(contact, config);
   if (!user.success) return user;
 
   const { appId, apiKey, fetchImpl = fetch } = config;
@@ -257,7 +267,7 @@ export async function deleteUser(
 
 /**
  * Sets tags on an existing user. It sends no subscription, so it cannot resubscribe anyone who
- * has unsubscribed: bulk jobs use this, never upsertWaitlistUser.
+ * has unsubscribed: bulk jobs use this, never addWaitlistUser.
  */
 export async function setUserTags(
   email: string,

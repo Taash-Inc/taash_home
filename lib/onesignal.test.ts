@@ -2,13 +2,13 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   UNSUBSCRIBE_HREF,
   WAITLIST_CONFIRMATION_TEMPLATE_ID,
+  addWaitlistUser,
   deleteUser,
   deterministicUuid,
   getEmailPreference,
   setEmailPreference,
   setUserTags,
   syncWaitlistContact,
-  upsertWaitlistUser,
   withPreferencesLink,
   type OneSignalContact,
 } from './onesignal';
@@ -51,12 +51,15 @@ function user({ enabled = true, tags = {} }: { enabled?: boolean; tags?: Record<
   };
 }
 
+const NOT_FOUND: [number, Record<string, unknown>] = [404, { errors: [{ title: 'User not found' }] }];
+
 describe('syncWaitlistContact', () => {
   it('creates the user, then sends the confirmation template', async () => {
-    const fetchImpl = replies([201, { identity: {} }], [200, { id: 'notif-1' }]);
+    const fetchImpl = replies(NOT_FOUND, [201, { identity: {} }], [200, { id: 'notif-1' }]);
     expect(await syncWaitlistContact(CONTACT, { ...CONFIG, fetchImpl })).toEqual({ success: true });
 
-    const user = sent(fetchImpl, 0);
+    expect(sent(fetchImpl, 0)).toMatchObject({ url: USER_URL, method: 'GET' });
+    const user = sent(fetchImpl, 1);
     expect(user.url).toBe('https://api.onesignal.com/apps/app-uuid/users');
     expect(user.headers.Authorization).toBe('Key os_v2_app_test');
     expect(user.body.identity).toEqual({ external_id: 'ada@example.com' });
@@ -70,7 +73,7 @@ describe('syncWaitlistContact', () => {
       pref_token: TOKEN,
     });
 
-    const email = sent(fetchImpl, 1);
+    const email = sent(fetchImpl, 2);
     expect(email.url).toBe('https://api.onesignal.com/notifications?c=email');
     expect(email.body).toMatchObject({
       app_id: 'app-uuid',
@@ -81,12 +84,21 @@ describe('syncWaitlistContact', () => {
     });
   });
 
+  it('leaves a user who is already in OneSignal untouched, so a retry cannot resubscribe them', async () => {
+    // The retry case: the first attempt created them, then they unsubscribed before it re-ran.
+    const fetchImpl = replies([200, user({ enabled: false })], [200, { id: 'notif-1' }]);
+    expect(await syncWaitlistContact(CONTACT, { ...CONFIG, fetchImpl })).toEqual({ success: true });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(sent(fetchImpl, 0)).toMatchObject({ url: USER_URL, method: 'GET' });
+    expect(sent(fetchImpl, 1).url).toBe('https://api.onesignal.com/notifications?c=email');
+  });
+
   it('uses the same idempotency key every time for the same address', async () => {
-    const a = replies([200, {}], [200, { id: 'n' }]);
-    const b = replies([200, {}], [200, { id: 'n' }]);
+    const a = replies(NOT_FOUND, [201, {}], [200, { id: 'n' }]);
+    const b = replies([200, user()], [200, { id: 'n' }]);
     await syncWaitlistContact(CONTACT, { ...CONFIG, fetchImpl: a });
     await syncWaitlistContact(CONTACT, { ...CONFIG, fetchImpl: b });
-    const keyA = sent(a, 1).body.idempotency_key;
+    const keyA = sent(a, 2).body.idempotency_key;
     expect(keyA).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
     expect(sent(b, 1).body.idempotency_key).toBe(keyA);
   });
@@ -101,12 +113,19 @@ describe('syncWaitlistContact', () => {
   it('reports a rejected key and does not try to send the email', async () => {
     const fetchImpl = replies([401, { errors: ['Access denied.'] }]);
     const result = await syncWaitlistContact(CONTACT, { ...CONFIG, fetchImpl });
-    expect(result).toEqual({ success: false, error: 'create user: HTTP 401 ["Access denied."]' });
+    expect(result).toEqual({ success: false, error: 'view user: HTTP 401 ["Access denied."]' });
     expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 
+  it('reports a failed create and does not try to send the email', async () => {
+    const fetchImpl = replies(NOT_FOUND, [400, { errors: ['bad request'] }]);
+    const result = await syncWaitlistContact(CONTACT, { ...CONFIG, fetchImpl });
+    expect(result).toEqual({ success: false, error: 'create user: HTTP 400 ["bad request"]' });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
   it('treats a 200 that reached nobody as a failure', async () => {
-    const fetchImpl = replies([200, {}], [200, { id: '', errors: ['All included players are not subscribed'] }]);
+    const fetchImpl = replies(NOT_FOUND, [201, {}], [200, { id: '', errors: ['All included players are not subscribed'] }]);
     const result = await syncWaitlistContact(CONTACT, { ...CONFIG, fetchImpl });
     expect(result.success).toBe(false);
     expect(!result.success && result.error).toContain('not subscribed');
@@ -123,17 +142,26 @@ describe('syncWaitlistContact', () => {
   });
 });
 
-describe('upsertWaitlistUser', () => {
-  it('creates the user without sending any email', async () => {
-    const fetchImpl = replies([201, { identity: {} }]);
-    expect(await upsertWaitlistUser(CONTACT, { ...CONFIG, fetchImpl })).toEqual({ success: true });
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
-    expect(sent(fetchImpl, 0).url).toBe('https://api.onesignal.com/apps/app-uuid/users');
+describe('addWaitlistUser', () => {
+  it('creates a missing user without sending any email', async () => {
+    const fetchImpl = replies(NOT_FOUND, [201, { identity: {} }]);
+    expect(await addWaitlistUser(CONTACT, { ...CONFIG, fetchImpl })).toEqual({ success: true });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(sent(fetchImpl, 1).url).toBe('https://api.onesignal.com/apps/app-uuid/users');
+  });
+
+  it('sends nothing to a user who already exists, subscribed or not', async () => {
+    for (const enabled of [true, false]) {
+      const fetchImpl = replies([200, user({ enabled, tags: { email_scope: 'invite_only' } })]);
+      expect(await addWaitlistUser(CONTACT, { ...CONFIG, fetchImpl })).toEqual({ success: true });
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+      expect(sent(fetchImpl, 0).method).toBe('GET');
+    }
   });
 
   it('reports a failure instead of throwing', async () => {
     const fetchImpl = replies([403, { errors: ['Forbidden'] }]);
-    const result = await upsertWaitlistUser(CONTACT, { ...CONFIG, fetchImpl });
+    const result = await addWaitlistUser(CONTACT, { ...CONFIG, fetchImpl });
     expect(result.success).toBe(false);
   });
 });
