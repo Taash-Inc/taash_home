@@ -1,3 +1,4 @@
+import { ensurePreferenceToken } from './email-preferences';
 import { syncWaitlistContact, type SyncResult, type WaitlistContact } from './onesignal';
 
 /**
@@ -19,11 +20,18 @@ export type FailedSync = {
   retry_count: number | null;
 };
 
-export function syncToOneSignal(contact: WaitlistContact): Promise<SyncResult> {
-  return syncWaitlistContact(contact, {
-    appId: process.env.ONESIGNAL_APP_ID,
-    apiKey: process.env.ONESIGNAL_API_KEY,
+export async function syncToOneSignal(contact: WaitlistContact): Promise<SyncResult> {
+  // Every email's Unsubscribe link carries this token, so it has to exist before OneSignal
+  // sends the confirmation. If it can't be made, the sync fails and is retried like any other.
+  const token = await ensurePreferenceToken(contact.email, {
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    key: process.env.SUPABASE_SERVICE_KEY,
   });
+  if (!token.success) return token;
+  return syncWaitlistContact(
+    { ...contact, preferenceToken: token.token },
+    { appId: process.env.ONESIGNAL_APP_ID, apiKey: process.env.ONESIGNAL_API_KEY }
+  );
 }
 
 function supabase(): { url: string; key: string } | null {
@@ -40,7 +48,7 @@ function headers(key: string, json = false): Record<string, string> {
   };
 }
 
-async function postToSlack(text: string): Promise<void> {
+export async function postToSlack(text: string): Promise<void> {
   const webhookUrl = process.env.SLACK_WEBHOOK_URL;
   if (!webhookUrl) {
     console.warn('Slack webhook not configured, skipping alert');
