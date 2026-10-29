@@ -9,9 +9,12 @@
     "start": "next start",
     "lint": "eslint",
     "audit": "npm audit",
-    "test": "vitest run",
+    "check": "npm run audit && npm run typecheck && npm run lint && npm test && npm run build",
+    "test": "vitest run && npm run test:automation",
+    "test:automation": "node --test scripts/*.test.mjs",
     "test:watch": "vitest",
-    "typecheck": "next typegen && tsc --noEmit"
+    "update:typescript": "node scripts/update-typescript-aliases.mjs",
+    "typecheck": "node scripts/update-typescript-aliases.mjs --check-installed && next typegen && tsc --noEmit"
   },
   "dependencies": {
     "@marsidev/react-turnstile": "^1.6.3",

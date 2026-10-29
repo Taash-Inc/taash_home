@@ -33,6 +33,9 @@ npm test
 npm run build
 ```
 
+`npm run check` runs all five checks above and is shared by CI and the alias
+update workflow. `npm test` also exercises the dependency automation guards.
+
 `typecheck` generates Next.js route types before running TypeScript 7. `build`
 automatically runs this check through `prebuild`, including in deployment builds.
 Next.js also runs its own check with the TypeScript 6 compatibility compiler.
@@ -57,10 +60,28 @@ rule only after `eslint-plugin-react`, `eslint-plugin-jsx-a11y`, and
 automatically remove this hold. Node type major updates are also held so they
 can be reviewed alongside a Node runtime upgrade.
 
-Dependabot's npm version updater currently skips `npm:` aliases. The TypeScript
-aliases (`@typescript/native` and `typescript`) therefore need manual updates.
-Preserve both aliases and run the checks above when updating them. This is an
-[upstream updater limitation](https://github.com/dependabot/dependabot-core/blob/main/npm_and_yarn/lib/dependabot/npm_and_yarn/file_parser.rb).
+Dependabot's npm version updater currently skips `npm:` aliases. The
+[TypeScript alias update workflow](.github/workflows/typescript-alias-updates.yml)
+covers that gap every Monday at 10:17 in `America/Chicago`, and can also be run
+manually from Actions. It updates stable releases within TypeScript **7** and
+the TypeScript **6** API compatibility package, preserving both aliases. Future
+major migrations and prereleases require a deliberate change to the policy in
+`scripts/update-typescript-aliases.mjs`.
+
+The updater refreshes `package.json` and `package-lock.json`, installs with strict
+peers, and runs `npm run check` before publishing an update PR. Installation and
+checks run with read-only permissions; a separate job can push only after they
+pass. It keeps one outstanding alias PR and never approves or merges updates.
+No new personal access token or repository secret is needed. Repository Actions
+settings must allow GitHub Actions to create PRs (GitHub combines creation and
+approval in one setting). GitHub may ask a maintainer to approve the additional
+normal PR workflow runs; the updater's full validation already runs automatically
+and is linked in the PR. A manual workflow run validates everything even when
+the aliases are current; scheduled runs skip installation/checks when unchanged.
+
+For local use, run `npm run update:typescript`, `npm ci --strict-peer-deps`, and
+`npm run check`. Registry errors, unexpected aliases, lockfile mismatches, and
+downgrades fail the update instead of silently reporting success.
 
 ## Learn More
 
