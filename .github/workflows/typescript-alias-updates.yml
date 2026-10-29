@@ -1,0 +1,118 @@
+name: TypeScript alias updates
+
+on:
+  schedule:
+    - cron: '17 10 * * 1'
+      timezone: America/Chicago
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: typescript-alias-updates
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      changed: ${{ steps.update.outputs.changed }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Update stable TypeScript 7 and compatibility API 6 aliases
+        id: update
+        run: npm run update:typescript
+      - name: Install with strict peers
+        if: steps.update.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
+        run: npm ci --strict-peer-deps
+      - name: Audit, typecheck, lint, tests, and build
+        if: steps.update.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
+        run: npm run check
+        env:
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+      - name: Reject unrelated tracked file changes from install or build
+        if: steps.update.outputs.changed == 'true'
+        run: git diff --exit-code -- . ':!package.json' ':!package-lock.json'
+      - name: Upload checked manifests
+        if: steps.update.outputs.changed == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: typescript-alias-update
+          path: |
+            package.json
+            package-lock.json
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 7
+
+  publish:
+    needs: prepare
+    if: needs.prepare.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      # Never execute updated dependencies in this job with write permissions.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: typescript-alias-update
+          path: ${{ runner.temp }}/typescript-alias-update
+      - name: Verify, commit, and open an update PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          CANDIDATE_DIR: ${{ runner.temp }}/typescript-alias-update
+        run: |
+          set -euo pipefail
+          node scripts/update-typescript-aliases.mjs --verify "$CANDIDATE_DIR"
+
+          # Only our bot's same-repository PRs count; forks cannot block updates.
+          existing=$(gh api --paginate "repos/${GH_REPO}/pulls?state=open&base=main&per_page=100" \
+            --jq '.[] | select((.head.ref | startswith("codex/typescript-aliases-")) and .head.repo.full_name == .base.repo.full_name and .user.login == "github-actions[bot]") | .html_url')
+          if [[ -n "$existing" ]]; then
+            echo "An alias update PR is already open: $existing" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          cp "$CANDIDATE_DIR/package.json" package.json
+          cp "$CANDIDATE_DIR/package-lock.json" package-lock.json
+          git diff --check
+          branch="codex/typescript-aliases-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          git switch -c "$branch"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- package.json package-lock.json
+          git commit -m 'build(deps): update TypeScript compatibility aliases'
+          git -c credential.helper='!gh auth git-credential' push origin "HEAD:$branch"
+
+          body="$RUNNER_TEMP/typescript-update-pr.md"
+          cat > "$body" <<EOF
+          Updates stable releases of the TypeScript aliases while keeping the TypeScript 7 compiler and TypeScript 6 compiler API compatibility split. Major upgrades and prereleases are excluded.
+
+          Before publishing these exact manifests, the read-only job passed strict peer installation, dependency audit, compiler/API identity checks, typecheck, lint, all tests, and production build.
+
+          Validation: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+
+          Review and merge manually. GitHub may request approval to run the additional normal PR workflows for a bot-created PR; the checks above have already run automatically.
+          EOF
+          gh pr create --base main --head "$branch" \
+            --title 'build(deps): update TypeScript compatibility aliases' --body-file "$body" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
