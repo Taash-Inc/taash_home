@@ -84,9 +84,9 @@ jobs:
           set -euo pipefail
           node scripts/update-typescript-aliases.mjs --verify "$CANDIDATE_DIR"
 
-          # Keep one outstanding update PR; later releases wait for its review.
+          # Only our bot's same-repository PRs count; forks cannot block updates.
           existing=$(gh api --paginate "repos/${GH_REPO}/pulls?state=open&base=main&per_page=100" \
-            --jq '.[] | select(.head.ref | startswith("codex/typescript-aliases-")) | .html_url')
+            --jq '.[] | select((.head.ref | startswith("codex/typescript-aliases-")) and .head.repo.full_name == .base.repo.full_name and .user.login == "github-actions[bot]") | .html_url')
           if [[ -n "$existing" ]]; then
             echo "An alias update PR is already open: $existing" >> "$GITHUB_STEP_SUMMARY"
             exit 0
