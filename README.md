@@ -43,6 +43,25 @@ that require the JavaScript compiler API can continue using the workspace
 See the [dependency upgrade record](docs/dependency-upgrades-2026-10-28.md) for
 versions, compatibility decisions, and verification results.
 
+## Dependency update PRs
+
+[Dependabot](.github/dependabot.yml) checks npm dependencies every Monday at
+09:00 and GitHub Actions at 09:30, both in `America/Chicago`. Minor and patch npm
+updates are grouped; major npm updates remain separate. Action updates are
+grouped and keep the existing commit SHA pins. Update PRs run the normal CI
+checks and remain for manual review and merging.
+
+ESLint 10 and newer are ignored while the app uses ESLint 9. Remove that ignore
+rule only after `eslint-plugin-react`, `eslint-plugin-jsx-a11y`, and
+`eslint-plugin-import` officially support ESLint 10. Dependabot does not
+automatically remove this hold. Node type major updates are also held so they
+can be reviewed alongside a Node runtime upgrade.
+
+Dependabot's npm version updater currently skips `npm:` aliases. The TypeScript
+aliases (`@typescript/native` and `typescript`) therefore need manual updates.
+Preserve both aliases and run the checks above when updating them. This is an
+[upstream updater limitation](https://github.com/dependabot/dependabot-core/blob/main/npm_and_yarn/lib/dependabot/npm_and_yarn/file_parser.rb).
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
