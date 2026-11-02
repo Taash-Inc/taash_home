@@ -19,7 +19,7 @@
   "dependencies": {
     "@marsidev/react-turnstile": "^1.6.3",
     "@portabletext/react": "^8.0.1",
-    "@sanity/client": "^8.13.0",
+    "@sanity/client": "^8.14.1",
     "@sanity/image-url": "^2.1.1",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
