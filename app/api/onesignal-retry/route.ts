@@ -1,10 +1,10 @@
 import { MAX_RETRIES, getFailedSyncs, postRetrySummary, retryFailedSync } from '@/lib/waitlist-sync';
 import { NextRequest, NextResponse } from 'next/server';
 
-// Verify cron secret (optional but recommended for security)
+// Missing configuration must never turn a privileged job into a public endpoint.
 function verifyCronSecret(request: NextRequest): boolean {
   const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret) return true; // Skip verification if not configured
+  if (!cronSecret?.trim()) return false;
 
   const authHeader = request.headers.get('authorization');
   return authHeader === `Bearer ${cronSecret}`;

@@ -114,6 +114,7 @@ describe('leaveWaitlist', () => {
       `${SUPABASE}/rest/v1/waitlist?email=eq.${encoded}`,
       `${SUPABASE}/rest/v1/waitlist_backup?email=eq.${encoded}`,
       `${SUPABASE}/rest/v1/failed_onesignal_syncs?email=eq.${encoded}`,
+      `${SUPABASE}/rest/v1/failed_loops_syncs?email=eq.${encoded}`,
       `${SUPABASE}/rest/v1/email_preference_tokens?email=eq.${encoded}`,
     ]);
     expect(fetchImpl.mock.calls.every(([, init]) => init?.method === 'DELETE')).toBe(true);

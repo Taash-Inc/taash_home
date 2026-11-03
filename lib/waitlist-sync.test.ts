@@ -75,7 +75,7 @@ describe('retryFailedSync', () => {
     const removed = requests.indexOf(`DELETE ${ONESIGNAL}/apps/app-uuid/users/by/external_id/ada%40example.com`);
     expect(created).toBeGreaterThan(-1);
     expect(removed).toBeGreaterThan(created);
-    for (const table of ['waitlist', 'waitlist_backup', 'failed_onesignal_syncs', 'email_preference_tokens']) {
+    for (const table of ['waitlist', 'waitlist_backup', 'failed_onesignal_syncs', 'failed_loops_syncs', 'email_preference_tokens']) {
       expect(requests).toContain(`DELETE ${SUPABASE}/rest/v1/${table}?email=eq.ada%40example.com`);
     }
   });
