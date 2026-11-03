@@ -16,7 +16,7 @@ function fixture(t) {
     name: 'fixture', scripts: { typecheck: 'tsc --noEmit' },
     devDependencies: {
       '@typescript/native': 'npm:typescript@^7.0.2',
-      typescript: 'npm:@typescript/typescript6@^6.0.2', eslint: '^9.39.5',
+      typescript: 'npm:@typescript/typescript6@^6.0.2', eslint: '^10.14.0',
     },
   };
   const lock = { lockfileVersion: 3, packages: {
@@ -103,7 +103,7 @@ test('updates both aliases and the lock together, using strict peers without scr
   const state = readState(f.directory);
   assert.equal(state.manifest.devDependencies['@typescript/native'], 'npm:typescript@^7.1.0');
   assert.equal(state.manifest.devDependencies.typescript, 'npm:@typescript/typescript6@^6.0.3');
-  assert.equal(state.manifest.devDependencies.eslint, '^9.39.5');
+  assert.equal(state.manifest.devDependencies.eslint, '^10.14.0');
   const calls = readFileSync(join(f.directory, 'npm-calls.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
   assert.deepEqual(calls.at(-1), ['install', '--package-lock-only', '--ignore-scripts', '--strict-peer-deps']);
 });
@@ -150,7 +150,7 @@ test('publisher rejects unrelated changes, no-ops, downgrades, and wrong alias i
   const valid = readFileSync(join(candidate.directory, 'package.json'), 'utf8');
   for (const change of [
     m => { m.scripts.typecheck = 'true'; },
-    m => { m.devDependencies.eslint = '^10.0.0'; },
+    m => { m.devDependencies.eslint = '^11.0.0'; },
     m => { m.devDependencies.typescript = 'npm:typescript@^7.1.0'; },
     m => { m.devDependencies.typescript = 'npm:@typescript/typescript6@^6.0.1'; },
   ]) {

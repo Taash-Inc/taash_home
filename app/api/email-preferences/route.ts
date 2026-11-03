@@ -6,6 +6,7 @@ import {
 } from '@/lib/email-preferences';
 import { setEmailPreference, type EmailPreference } from '@/lib/onesignal';
 import { postToSlack } from '@/lib/waitlist-sync';
+import { readJsonObject, RequestInputError } from '@/lib/request-json';
 import { after, NextRequest, NextResponse } from 'next/server';
 
 type Action = EmailPreference | 'leave';
@@ -21,8 +22,14 @@ function isAction(value: unknown): value is Action {
  * acted on being opened would unsubscribe people who never clicked anything.
  */
 export async function POST(request: NextRequest) {
-  const body: unknown = await request.json().catch(() => null);
-  const { token, action } = (body ?? {}) as { token?: unknown; action?: unknown };
+  let body: Record<string, unknown>;
+  try {
+    body = await readJsonObject(request);
+  } catch (error) {
+    if (!(error instanceof RequestInputError)) throw error;
+    return NextResponse.json({ error: error.message }, { status: error.status });
+  }
+  const { token, action } = body;
   if (!isPreferenceToken(token) || !isAction(action)) {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
   }

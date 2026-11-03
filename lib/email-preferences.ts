@@ -14,7 +14,9 @@ const TOKENS_TABLE = 'email_preference_tokens';
  * re-added to OneSignal by the nightly retry. The token goes last, so if a delete fails
  * part-way the link still works and the person can try again.
  */
-const SIGNUP_TABLES = ['waitlist', 'waitlist_backup', 'failed_onesignal_syncs', TOKENS_TABLE];
+const SIGNUP_TABLES = [
+  'waitlist', 'waitlist_backup', 'failed_onesignal_syncs', 'failed_loops_syncs', TOKENS_TABLE,
+];
 
 export type Db = { url: string | undefined; key: string | undefined; fetchImpl?: typeof fetch };
 
