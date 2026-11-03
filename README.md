@@ -23,7 +23,11 @@ Use the Node version in `.nvmrc` and npm with the committed `package-lock.json`.
 TypeScript 7 is installed as `@typescript/native` and provides `tsc`.
 The `typescript` dependency aliases Microsoft's TypeScript 6 compatibility package,
 which provides the compiler API needed by ESLint and the Next.js editor plugin.
-ESLint stays on major 9 until its plugins officially support major 10.
+ESLint 10 uses the Next.js plugin directly, ESLint React, React Hooks, the
+`jsx-a11y-x` plugin, and typescript-eslint. ESLint's core syntax checks preserve
+the named-default-export check. The lint configuration tests verify that React,
+Hooks, accessibility, Next.js, exports, and TypeScript
+checks remain active. See the [lint migration record](docs/lint-migration-2026-11-03.md).
 
 ```bash
 npm run audit
@@ -54,11 +58,11 @@ updates are grouped; major npm updates remain separate. Action updates are
 grouped and keep the existing commit SHA pins. Update PRs run the normal CI
 checks and remain for manual review and merging.
 
-ESLint 10 and newer are ignored while the app uses ESLint 9. Remove that ignore
-rule only after `eslint-plugin-react`, `eslint-plugin-jsx-a11y`, and
-`eslint-plugin-import` officially support ESLint 10. Dependabot does not
-automatically remove this hold. Node type major updates are also held so they
-can be reviewed alongside a Node runtime upgrade.
+Lint dependencies receive the same update reviews as the other npm packages.
+The minimatch override keeps their shared glob matcher on the patched major;
+review its consumers and rerun the lint configuration tests before removing it.
+Node type major updates are held so they can be reviewed alongside a Node
+runtime upgrade.
 
 Dependabot's npm version updater currently skips `npm:` aliases. The
 [TypeScript alias update workflow](.github/workflows/typescript-alias-updates.yml)

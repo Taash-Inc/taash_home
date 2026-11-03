@@ -43,6 +43,7 @@ export async function verifyTurnstile(
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ secret, response: token }),
+      signal: AbortSignal.timeout(10_000),
     });
     const data: { success?: boolean; hostname?: string; 'error-codes'?: string[] } =
       await response.json();

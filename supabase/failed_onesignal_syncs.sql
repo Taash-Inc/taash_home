@@ -15,3 +15,5 @@ create table if not exists public.failed_onesignal_syncs (
 
 -- No policies: only the service key (which bypasses RLS) can read or write it.
 alter table public.failed_onesignal_syncs enable row level security;
+revoke all privileges on table public.failed_onesignal_syncs from public, anon, authenticated;
+grant select, insert, update, delete on table public.failed_onesignal_syncs to service_role;

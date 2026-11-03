@@ -13,6 +13,8 @@ create table if not exists public.email_preference_tokens (
 
 -- No policies: only the service key (which bypasses RLS) can read or write it.
 alter table public.email_preference_tokens enable row level security;
+revoke all privileges on table public.email_preference_tokens from public, anon, authenticated;
+grant select, insert, update, delete on table public.email_preference_tokens to service_role;
 
 -- Tokens for everyone already on the waitlist; new signups get theirs as they sync.
 insert into public.email_preference_tokens (email)

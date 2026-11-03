@@ -1,5 +1,6 @@
 import { verifyTurnstile } from '@/lib/turnstile';
 import { syncSignup } from '@/lib/waitlist-sync';
+import { readJsonObject, RequestInputError } from '@/lib/request-json';
 import { after, NextRequest, NextResponse } from 'next/server';
 
 // Sanitize input: trim whitespace, limit length, remove potential XSS
@@ -27,35 +28,44 @@ async function insertToSupabase(data: {
       'Content-Type': 'application/json',
       apikey: supabaseKey,
       Authorization: `Bearer ${supabaseKey}`,
-      Prefer: 'return=representation',
+      Prefer: 'return=minimal',
     },
     body: JSON.stringify(data),
   });
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    console.error('Supabase REST error:', response.status, errorData);
-
     // Check for duplicate email
     if (response.status === 409 || errorData?.code === '23505') {
       return { error: { code: '23505' } };
     }
 
-    return { error: { message: errorData?.message || 'Insert failed' } };
+    console.error('Supabase insert failed:', response.status, errorData?.code);
+    return { error: { message: 'Insert failed' } };
   }
 
-  const result = await response.json();
-  return { data: result };
+  return {};
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await readJsonObject(request);
     const { fullName, email, profession, monthlyIncome, turnstileToken } = body;
 
     // Verify Turnstile CAPTCHA
-    if (!turnstileToken) {
+    if (typeof turnstileToken !== 'string' || !turnstileToken || turnstileToken.length > 2048) {
       return NextResponse.json({ error: 'Please complete the CAPTCHA' }, { status: 400 });
+    }
+
+    // Validate shapes and lengths before contacting providers. Never truncate an address
+    // into a different person's email, or allow a non-string to reach sanitize().
+    if (
+      typeof fullName !== 'string' || fullName.length > 100 ||
+      typeof email !== 'string' || email.length > 255 ||
+      typeof profession !== 'string' || profession.length > 100 ||
+      (monthlyIncome != null && (typeof monthlyIncome !== 'string' || monthlyIncome.length > 50))
+    ) {
+      return NextResponse.json({ error: 'Invalid input data' }, { status: 400 });
     }
 
     const isValidToken = await verifyTurnstile(turnstileToken, {
@@ -91,7 +101,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert into Supabase using REST API
-    const { data, error } = await insertToSupabase({
+    const { error } = await insertToSupabase({
       full_name: sanitizedData.fullName,
       email: sanitizedData.email,
       profession: sanitizedData.profession,
@@ -102,8 +112,8 @@ export async function POST(request: NextRequest) {
       // Handle duplicate email
       if (error.code === '23505') {
         return NextResponse.json(
-          { error: 'This email is already on the waitlist!' },
-          { status: 409 }
+          { message: 'Successfully joined the waitlist!' },
+          { status: 201 }
         );
       }
       console.error('Supabase error:', error);
@@ -125,10 +135,13 @@ export async function POST(request: NextRequest) {
     );
 
     return NextResponse.json(
-      { message: 'Successfully joined the waitlist!', data },
+      { message: 'Successfully joined the waitlist!' },
       { status: 201 }
     );
   } catch (error) {
+    if (error instanceof RequestInputError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
