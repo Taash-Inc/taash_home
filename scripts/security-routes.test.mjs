@@ -52,6 +52,7 @@ const signup = {
 function waitlist(status = 201, errorBody) {
   const writes = [];
   const slack = [];
+  const announced = [];
   let captchas = 0;
   const route = handler('app/api/waitlist/route.ts', {
     env: { NEXT_PUBLIC_SUPABASE_URL: 'https://db.example.invalid', SUPABASE_SERVICE_KEY: 'dummy-key' },
@@ -60,6 +61,7 @@ function waitlist(status = 201, errorBody) {
       '@/lib/waitlist-sync': {
         syncSignup: async () => { throw new Error('Must run after response'); },
         postToSlack: async (text) => { slack.push(text); },
+        announceSignup: async (signup) => { announced.push(signup); },
       },
     },
     fetchImpl: async (url, init) => {
@@ -67,7 +69,7 @@ function waitlist(status = 201, errorBody) {
       return new Response(errorBody === undefined ? null : JSON.stringify(errorBody), { status });
     },
   });
-  return { ...route, writes, slack, captchas: () => captchas };
+  return { ...route, writes, slack, announced, captchas: () => captchas };
 }
 
 test('retry GET and POST deny missing, blank and wrong secrets before reading the queue', async () => {
@@ -110,7 +112,7 @@ test('signup returns the same public response for a new or existing address', as
   assert.deepEqual(await response.json(), await repeated.json());
   assert.equal(fresh.writes[0].init.headers.Prefer, 'return=minimal');
   assert.equal(JSON.parse(fresh.writes[0].init.body).email, 'ada@example.invalid');
-  assert.equal(fresh.callbacks.length, 1);
+  assert.equal(fresh.callbacks.length, 2);
   assert.equal(duplicate.callbacks.length, 0);
 });
 
@@ -123,7 +125,7 @@ test('signup accepts a first name and email without profession or income', async
     const row = JSON.parse(route.writes[0].init.body);
     assert.equal(row.profession, null);
     assert.equal(row.monthly_income, null);
-    assert.equal(route.callbacks.length, 1);
+    assert.equal(route.callbacks.length, 2);
   }
 });
 
@@ -152,6 +154,42 @@ test('a duplicate signup does not alert Slack', async () => {
   const route = waitlist(409, { code: '23505' });
   assert.equal((await route.POST(request(signup))).status, 201);
   assert.equal(route.callbacks.length, 0);
+});
+
+test('a new signup is announced on Slack after the response, with the cleaned-up details', async () => {
+  const route = waitlist();
+  assert.equal((await route.POST(request(signup))).status, 201);
+  assert.equal(route.announced.length, 0, 'the announcement must not delay the response');
+  await route.callbacks[1]();
+  // The route runs in its own VM context, so compare plain data rather than object identity.
+  assert.deepEqual(JSON.parse(JSON.stringify(route.announced)), [
+    { fullName: 'Ada Obi', email: 'ada@example.invalid', profession: 'Freelancer', monthlyIncome: null },
+  ]);
+});
+
+// PR #55 review: line breaks in a name could add forged lines to the Slack alerts.
+test('signup collapses line breaks in the name before saving or alerting', async () => {
+  const injected = { ...signup, fullName: 'Ada\n• Email: boss@taash.tax\r\n\t• Error: none' };
+  const saved = waitlist();
+  assert.equal((await saved.POST(request(injected))).status, 201);
+  const row = JSON.parse(saved.writes[0].init.body);
+  assert.equal(row.full_name, 'Ada • Email: boss@taash.tax • Error: none');
+  await saved.callbacks[1]();
+  assert.doesNotMatch(saved.announced[0].fullName, /[\r\n\t]/);
+
+  const failed = waitlist(500, { code: 'XX000' });
+  await failed.POST(request(injected));
+  await failed.callbacks[0]();
+  const lines = failed.slack[0].split('\n');
+  assert.deepEqual(lines.filter((l) => l.startsWith('• Email:')), ['• Email: ada@example.invalid']);
+  assert.equal(lines.filter((l) => l.startsWith('• Error:')).length, 1);
+});
+
+test('a signup that cannot be saved is not announced as a new signup', async () => {
+  const route = waitlist(500, { code: 'XX000' });
+  await route.POST(request(signup));
+  for (const callback of route.callbacks) await callback();
+  assert.equal(route.announced.length, 0);
 });
 
 test('signup accepts only the profession choices the form offers', async () => {

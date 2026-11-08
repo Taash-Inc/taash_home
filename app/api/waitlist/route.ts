@@ -1,12 +1,14 @@
 import { verifyTurnstile } from '@/lib/turnstile';
 import { isProfession } from '@/lib/professions';
-import { postToSlack, syncSignup } from '@/lib/waitlist-sync';
+import { announceSignup, postToSlack, syncSignup } from '@/lib/waitlist-sync';
 import { readJsonObject, RequestInputError } from '@/lib/request-json';
 import { after, NextRequest, NextResponse } from 'next/server';
 
-// Sanitize input: trim whitespace, limit length, remove potential XSS
+// Sanitize input: limit length, remove angle brackets (basic XSS), and collapse whitespace.
+// Line breaks and tabs become single spaces: no name or email needs them, and left in they
+// could add fake lines to the Slack alerts, which are one fact per line.
 function sanitize(input: string, maxLength: number = 255): string {
-  return input.trim().slice(0, maxLength).replace(/[<>]/g, ''); // Remove angle brackets to prevent basic XSS
+  return input.slice(0, maxLength).replace(/[<>]/g, '').replace(/\s+/g, ' ').trim();
 }
 
 // Insert into Supabase using REST API
@@ -147,6 +149,8 @@ export async function POST(request: NextRequest) {
         monthlyIncome: sanitizedData.monthlyIncome,
       })
     );
+    // A Slack ping for each new person. Kept apart from the sync so neither can hold up the other.
+    after(() => announceSignup(sanitizedData));
 
     return NextResponse.json(
       { message: 'Successfully joined the waitlist!' },

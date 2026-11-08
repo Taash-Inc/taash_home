@@ -65,6 +65,44 @@ export async function postToSlack(text: string): Promise<void> {
   }
 }
 
+/** How many people are on the waitlist, or null if Supabase can't say. */
+async function countWaitlist(): Promise<number | null> {
+  const db = supabase();
+  if (!db) return null;
+  try {
+    const response = await fetch(`${db.url}/rest/v1/waitlist?select=email`, {
+      method: 'HEAD',
+      headers: { ...headers(db.key), Prefer: 'count=exact' },
+      // Only a nice-to-have: don't let a slow database hold the announcement back for long.
+      signal: AbortSignal.timeout(3000),
+    });
+    // PostgREST answers with "Content-Range: 0-36/37" (or "*/0" when empty).
+    const total = Number(response.headers.get('content-range')?.split('/')[1]);
+    return response.ok && Number.isInteger(total) ? total : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Slack messages are one fact per line, so a value with its own line breaks could add fake
+ * lines (a forged email or total). Collapse every run of whitespace, line breaks included.
+ */
+function oneLine(value: string): string {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Tell the team someone joined. It runs after the response has gone out, and the count is a
+ * nice-to-have: if Supabase can't give it, the message goes out without it.
+ */
+export async function announceSignup(signup: { fullName: string; email: string; profession: string | null }): Promise<void> {
+  const total = await countWaitlist();
+  await postToSlack(
+    `🎉 *New waitlist signup*\n• Name: ${oneLine(signup.fullName)}\n• Email: ${oneLine(signup.email)}\n• Profession: ${signup.profession ? oneLine(signup.profession) : 'not given'}${total === null ? '' : `\n• Waitlist total: ${total}`}`
+  );
+}
+
 async function storeFailedSync(contact: WaitlistContact, errorMessage: string): Promise<void> {
   const db = supabase();
   if (!db) {
