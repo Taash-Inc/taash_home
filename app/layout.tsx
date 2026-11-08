@@ -88,7 +88,7 @@ export const metadata: Metadata = {
     title,
     description,
     images: ['/og-image.png?v=2'],
-    creator: '@taashapp',
+    creator: '@taashtax',
   },
   robots: {
     index: true,

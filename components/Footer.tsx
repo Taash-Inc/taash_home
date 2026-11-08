@@ -16,7 +16,7 @@ export default function Footer() {
           {/* Social Media Icons */}
           <div className='flex items-center gap-4'>
             <Link
-              href='https://www.instagram.com/taashapp/'
+              href='https://www.instagram.com/taash.tax/'
               target='_blank'
               rel='noopener noreferrer'
               className='flex h-10 w-10 items-center justify-center rounded-full bg-ink-800 transition-colors hover:bg-brand-600'
@@ -26,7 +26,7 @@ export default function Footer() {
               </svg>
             </Link>
             <Link
-              href='https://x.com/taashapp'
+              href='https://x.com/taashtax'
               target='_blank'
               rel='noopener noreferrer'
               className='flex h-10 w-10 items-center justify-center rounded-full bg-ink-800 transition-colors hover:bg-brand-600'
