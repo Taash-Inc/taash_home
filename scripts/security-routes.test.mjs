@@ -167,6 +167,24 @@ test('a new signup is announced on Slack after the response, with the cleaned-up
   ]);
 });
 
+// PR #55 review: line breaks in a name could add forged lines to the Slack alerts.
+test('signup collapses line breaks in the name before saving or alerting', async () => {
+  const injected = { ...signup, fullName: 'Ada\n• Email: boss@taash.tax\r\n\t• Error: none' };
+  const saved = waitlist();
+  assert.equal((await saved.POST(request(injected))).status, 201);
+  const row = JSON.parse(saved.writes[0].init.body);
+  assert.equal(row.full_name, 'Ada • Email: boss@taash.tax • Error: none');
+  await saved.callbacks[1]();
+  assert.doesNotMatch(saved.announced[0].fullName, /[\r\n\t]/);
+
+  const failed = waitlist(500, { code: 'XX000' });
+  await failed.POST(request(injected));
+  await failed.callbacks[0]();
+  const lines = failed.slack[0].split('\n');
+  assert.deepEqual(lines.filter((l) => l.startsWith('• Email:')), ['• Email: ada@example.invalid']);
+  assert.equal(lines.filter((l) => l.startsWith('• Error:')).length, 1);
+});
+
 test('a signup that cannot be saved is not announced as a new signup', async () => {
   const route = waitlist(500, { code: 'XX000' });
   await route.POST(request(signup));

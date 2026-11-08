@@ -143,4 +143,28 @@ describe('announceSignup', () => {
       expect(posts[0]).not.toContain('Waitlist total');
     }
   });
+
+  // PR #55 review: a name with its own line breaks could add a forged line to the message.
+  it('keeps every value on its own line, so a name cannot add fake lines', async () => {
+    const posts = slack(() => new Response(null, { status: 200, headers: { 'content-range': '0-37/38' } }));
+    await announceSignup({ ...ADA, fullName: 'Ada\n• Email: boss@taash.tax\r\n• Waitlist total: 9999' });
+    const lines = posts[0].split('\n');
+    expect(lines).toHaveLength(5);
+    expect(lines.filter((l) => l.startsWith('• Email:'))).toEqual(['• Email: ada@example.com']);
+    expect(lines.filter((l) => l.startsWith('• Waitlist total:'))).toEqual(['• Waitlist total: 38']);
+  });
+
+  it('gives up on a slow count instead of holding the message back', async () => {
+    let signal: AbortSignal | null | undefined;
+    vi.stubEnv('SLACK_WEBHOOK_URL', '');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<typeof fetch>(async (_input, init) => {
+        signal = init?.signal;
+        return new Response(null, { status: 200, headers: { 'content-range': '0-0/1' } });
+      })
+    );
+    await announceSignup(ADA);
+    expect(signal).toBeInstanceOf(AbortSignal);
+  });
 });
