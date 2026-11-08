@@ -1,5 +1,6 @@
 'use client';
 
+import { PROFESSIONS } from '@/lib/professions';
 import { clearJoined, markJoined, useWaitlistJoined } from '@/lib/waitlist-store';
 import { initialVerifyState, verifyStep, type VerifyEvent } from '@/lib/waitlist-verify';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
@@ -8,14 +9,6 @@ import Link from 'next/link';
 import { useEffect, useId, useRef, useState } from 'react';
 
 type Placement = 'hero' | 'section' | 'calculator';
-
-const PROFESSIONS = [
-  'Freelancer',
-  'Content creator',
-  'Small business',
-  'Salary earner',
-  'Other',
-] as const;
 
 const SHARE_URL =
   'https://www.taash.tax/?utm_source=whatsapp&utm_medium=referral&utm_campaign=waitlist_share';

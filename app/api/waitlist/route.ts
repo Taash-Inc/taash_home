@@ -1,5 +1,6 @@
 import { verifyTurnstile } from '@/lib/turnstile';
-import { syncSignup } from '@/lib/waitlist-sync';
+import { isProfession } from '@/lib/professions';
+import { postToSlack, syncSignup } from '@/lib/waitlist-sync';
 import { readJsonObject, RequestInputError } from '@/lib/request-json';
 import { after, NextRequest, NextResponse } from 'next/server';
 
@@ -40,8 +41,7 @@ async function insertToSupabase(data: {
       return { error: { code: '23505' } };
     }
 
-    console.error('Supabase insert failed:', response.status, errorData?.code);
-    return { error: { message: 'Insert failed' } };
+    return { error: { message: `Insert failed: HTTP ${response.status}${errorData?.code ? ` (${errorData.code})` : ''}` } };
   }
 
   return {};
@@ -62,7 +62,8 @@ export async function POST(request: NextRequest) {
     if (
       typeof fullName !== 'string' || fullName.length > 100 ||
       typeof email !== 'string' || email.length > 255 ||
-      (profession != null && (typeof profession !== 'string' || profession.length > 100)) ||
+      // Only the form's own choices; '' and null mean "not given".
+      (profession != null && profession !== '' && !isProfession(profession)) ||
       (monthlyIncome != null && (typeof monthlyIncome !== 'string' || monthlyIncome.length > 50))
     ) {
       return NextResponse.json({ error: 'Invalid input data' }, { status: 400 });
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
     const sanitizedData = {
       fullName: sanitize(fullName, 100),
       email: sanitize(email, 255).toLowerCase(),
-      profession: profession ? sanitize(profession, 100) || null : null,
+      profession: isProfession(profession) ? profession : null,
       monthlyIncome: monthlyIncome ? sanitize(monthlyIncome, 50) : null,
     };
 
@@ -102,22 +103,34 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert into Supabase using REST API
-    const { error } = await insertToSupabase({
-      full_name: sanitizedData.fullName,
-      email: sanitizedData.email,
-      profession: sanitizedData.profession,
-      monthly_income: sanitizedData.monthlyIncome,
-    });
-
-    if (error) {
-      // Handle duplicate email
-      if (error.code === '23505') {
-        return NextResponse.json(
-          { message: 'Successfully joined the waitlist!' },
-          { status: 201 }
-        );
+    let saveError: string | undefined;
+    try {
+      const { error } = await insertToSupabase({
+        full_name: sanitizedData.fullName,
+        email: sanitizedData.email,
+        profession: sanitizedData.profession,
+        monthly_income: sanitizedData.monthlyIncome,
+      });
+      // A duplicate gets the same answer as a new signup, so the form can't be used to test
+      // whether an address is on the list.
+      if (error?.code === '23505') {
+        return NextResponse.json({ message: 'Successfully joined the waitlist!' }, { status: 201 });
       }
-      console.error('Supabase error:', error);
+      saveError = error?.message;
+    } catch (error) {
+      saveError = error instanceof Error ? error.message : String(error);
+    }
+
+    if (saveError) {
+      // Unlike a OneSignal failure, nothing parks a signup that never reached the database: it
+      // used to be logged and lost. Slack gets the details so someone can add the person by hand.
+      console.error('Waitlist signup could not be saved:', saveError);
+      const reason = saveError;
+      after(() =>
+        postToSlack(
+          `🚨 *Waitlist signup could not be saved*\n• Name: ${sanitizedData.fullName}\n• Email: ${sanitizedData.email}\n• Profession: ${sanitizedData.profession ?? 'not given'}\n• Error: ${reason}\nAdd them to the waitlist by hand.`
+        )
+      );
       return NextResponse.json({ error: 'Failed to join waitlist' }, { status: 500 });
     }
 
