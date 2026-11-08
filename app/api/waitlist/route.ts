@@ -1,6 +1,6 @@
 import { verifyTurnstile } from '@/lib/turnstile';
 import { isProfession } from '@/lib/professions';
-import { postToSlack, syncSignup } from '@/lib/waitlist-sync';
+import { announceSignup, postToSlack, syncSignup } from '@/lib/waitlist-sync';
 import { readJsonObject, RequestInputError } from '@/lib/request-json';
 import { after, NextRequest, NextResponse } from 'next/server';
 
@@ -147,6 +147,8 @@ export async function POST(request: NextRequest) {
         monthlyIncome: sanitizedData.monthlyIncome,
       })
     );
+    // A Slack ping for each new person. Kept apart from the sync so neither can hold up the other.
+    after(() => announceSignup(sanitizedData));
 
     return NextResponse.json(
       { message: 'Successfully joined the waitlist!' },

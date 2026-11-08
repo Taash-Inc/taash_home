@@ -65,6 +65,34 @@ export async function postToSlack(text: string): Promise<void> {
   }
 }
 
+/** How many people are on the waitlist, or null if Supabase can't say. */
+async function countWaitlist(): Promise<number | null> {
+  const db = supabase();
+  if (!db) return null;
+  try {
+    const response = await fetch(`${db.url}/rest/v1/waitlist?select=email`, {
+      method: 'HEAD',
+      headers: { ...headers(db.key), Prefer: 'count=exact' },
+    });
+    // PostgREST answers with "Content-Range: 0-36/37" (or "*/0" when empty).
+    const total = Number(response.headers.get('content-range')?.split('/')[1]);
+    return response.ok && Number.isInteger(total) ? total : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Tell the team someone joined. It runs after the response has gone out, and the count is a
+ * nice-to-have: if Supabase can't give it, the message goes out without it.
+ */
+export async function announceSignup(signup: { fullName: string; email: string; profession: string | null }): Promise<void> {
+  const total = await countWaitlist();
+  await postToSlack(
+    `🎉 *New waitlist signup*\n• Name: ${signup.fullName}\n• Email: ${signup.email}\n• Profession: ${signup.profession ?? 'not given'}${total === null ? '' : `\n• Waitlist total: ${total}`}`
+  );
+}
+
 async function storeFailedSync(contact: WaitlistContact, errorMessage: string): Promise<void> {
   const db = supabase();
   if (!db) {
