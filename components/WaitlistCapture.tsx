@@ -1,6 +1,7 @@
 'use client';
 
 import { clearJoined, markJoined, useWaitlistJoined } from '@/lib/waitlist-store';
+import { initialVerifyState, verifyStep, type VerifyEvent } from '@/lib/waitlist-verify';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { track } from '@vercel/analytics';
 import Link from 'next/link';
@@ -54,8 +55,9 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
   const [turnstileWanted, setTurnstileWanted] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const turnstileRef = useRef<TurnstileInstance>(null);
-  const tokenRef = useRef<string | null>(null);
-  const pendingRef = useRef(false);
+  // Turnstile events can arrive before the visitor submits; lib/waitlist-verify.ts remembers
+  // them (an early "unsupported" used to be dropped, leaving the submit waiting forever).
+  const verifyRef = useRef(initialVerifyState);
   const startedRef = useRef(false);
   const slowTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const formId = useId();
@@ -71,9 +73,7 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
   };
 
   const send = async (token: string) => {
-    pendingRef.current = false;
     clearTimeout(slowTimerRef.current);
-    tokenRef.current = null;
     setHint('');
     setBusy('sending');
 
@@ -108,23 +108,37 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
     } finally {
       setBusy('');
       // Tokens are single-use; start on the next one straight away.
+      verifyRef.current = verifyStep(verifyRef.current, { type: 'sent' }).state;
       turnstileRef.current?.reset();
     }
   };
 
-  const onToken = (token: string) => {
-    tokenRef.current = token;
-    if (pendingRef.current) void send(token);
-  };
-
-  const onVerifyFailed = () => {
-    tokenRef.current = null;
-    if (!pendingRef.current) return;
-    pendingRef.current = false;
-    clearTimeout(slowTimerRef.current);
-    setBusy('');
-    setHint('failed');
-    track('Waitlist Error', { placement, reason: 'turnstile' });
+  const dispatch = (event: VerifyEvent) => {
+    const { state, action } = verifyStep(verifyRef.current, event);
+    verifyRef.current = state;
+    switch (action.type) {
+      case 'send':
+        void send(action.token);
+        break;
+      case 'wait':
+        setBusy('verifying');
+        setHint('');
+        if (action.retry) turnstileRef.current?.reset();
+        clearTimeout(slowTimerRef.current);
+        slowTimerRef.current = setTimeout(() => {
+          if (verifyRef.current.pending) setHint((h) => h || 'slow');
+        }, SLOW_VERIFY_MS);
+        break;
+      case 'failed':
+        clearTimeout(slowTimerRef.current);
+        setBusy('');
+        setHint('failed');
+        track('Waitlist Error', {
+          placement,
+          reason: verifyRef.current.unsupported ? 'turnstile-unsupported' : 'turnstile',
+        });
+        break;
+    }
   };
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -133,18 +147,7 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
     setError('');
     start();
     track('Waitlist Submit', { placement });
-
-    if (tokenRef.current) {
-      void send(tokenRef.current);
-      return;
-    }
-    pendingRef.current = true;
-    setBusy('verifying');
-    setHint('');
-    clearTimeout(slowTimerRef.current);
-    slowTimerRef.current = setTimeout(() => {
-      if (pendingRef.current) setHint((h) => h || 'slow');
-    }, SLOW_VERIFY_MS);
+    dispatch({ type: 'submit' });
   };
 
   if (joined) {
@@ -235,12 +238,10 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
           <Turnstile
             ref={turnstileRef}
             siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'}
-            onSuccess={onToken}
-            onError={onVerifyFailed}
-            onUnsupported={onVerifyFailed}
-            onExpire={() => {
-              tokenRef.current = null;
-            }}
+            onSuccess={(token) => dispatch({ type: 'token', token })}
+            onError={() => dispatch({ type: 'error' })}
+            onUnsupported={() => dispatch({ type: 'unsupported' })}
+            onExpire={() => dispatch({ type: 'expire' })}
             onBeforeInteractive={() => setHint('tap')}
             onAfterInteractive={() => setHint('')}
             options={{ theme: 'light', appearance: 'interaction-only', size: 'flexible' }}
