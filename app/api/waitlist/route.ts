@@ -1,5 +1,6 @@
 import { verifyTurnstile } from '@/lib/turnstile';
-import { syncSignup } from '@/lib/waitlist-sync';
+import { isProfession } from '@/lib/professions';
+import { postToSlack, syncSignup } from '@/lib/waitlist-sync';
 import { readJsonObject, RequestInputError } from '@/lib/request-json';
 import { after, NextRequest, NextResponse } from 'next/server';
 
@@ -12,7 +13,7 @@ function sanitize(input: string, maxLength: number = 255): string {
 async function insertToSupabase(data: {
   full_name: string;
   email: string;
-  profession: string;
+  profession: string | null;
   monthly_income: string | null;
 }) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -40,8 +41,7 @@ async function insertToSupabase(data: {
       return { error: { code: '23505' } };
     }
 
-    console.error('Supabase insert failed:', response.status, errorData?.code);
-    return { error: { message: 'Insert failed' } };
+    return { error: { message: `Insert failed: HTTP ${response.status}${errorData?.code ? ` (${errorData.code})` : ''}` } };
   }
 
   return {};
@@ -62,7 +62,8 @@ export async function POST(request: NextRequest) {
     if (
       typeof fullName !== 'string' || fullName.length > 100 ||
       typeof email !== 'string' || email.length > 255 ||
-      typeof profession !== 'string' || profession.length > 100 ||
+      // Only the form's own choices; '' and null mean "not given".
+      (profession != null && profession !== '' && !isProfession(profession)) ||
       (monthlyIncome != null && (typeof monthlyIncome !== 'string' || monthlyIncome.length > 50))
     ) {
       return NextResponse.json({ error: 'Invalid input data' }, { status: 400 });
@@ -76,8 +77,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'CAPTCHA verification failed' }, { status: 400 });
     }
 
-    // Validate required fields
-    if (!fullName || !email || !profession) {
+    // Validate required fields. Profession became optional: the forms now ask only for a first
+    // name and an email, with profession as an optional one-tap choice.
+    if (!fullName || !email) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -85,12 +87,12 @@ export async function POST(request: NextRequest) {
     const sanitizedData = {
       fullName: sanitize(fullName, 100),
       email: sanitize(email, 255).toLowerCase(),
-      profession: sanitize(profession, 100),
+      profession: isProfession(profession) ? profession : null,
       monthlyIncome: monthlyIncome ? sanitize(monthlyIncome, 50) : null,
     };
 
     // Validate sanitized data isn't empty
-    if (!sanitizedData.fullName || !sanitizedData.email || !sanitizedData.profession) {
+    if (!sanitizedData.fullName || !sanitizedData.email) {
       return NextResponse.json({ error: 'Invalid input data' }, { status: 400 });
     }
 
@@ -101,22 +103,34 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert into Supabase using REST API
-    const { error } = await insertToSupabase({
-      full_name: sanitizedData.fullName,
-      email: sanitizedData.email,
-      profession: sanitizedData.profession,
-      monthly_income: sanitizedData.monthlyIncome,
-    });
-
-    if (error) {
-      // Handle duplicate email
-      if (error.code === '23505') {
-        return NextResponse.json(
-          { message: 'Successfully joined the waitlist!' },
-          { status: 201 }
-        );
+    let saveError: string | undefined;
+    try {
+      const { error } = await insertToSupabase({
+        full_name: sanitizedData.fullName,
+        email: sanitizedData.email,
+        profession: sanitizedData.profession,
+        monthly_income: sanitizedData.monthlyIncome,
+      });
+      // A duplicate gets the same answer as a new signup, so the form can't be used to test
+      // whether an address is on the list.
+      if (error?.code === '23505') {
+        return NextResponse.json({ message: 'Successfully joined the waitlist!' }, { status: 201 });
       }
-      console.error('Supabase error:', error);
+      saveError = error?.message;
+    } catch (error) {
+      saveError = error instanceof Error ? error.message : String(error);
+    }
+
+    if (saveError) {
+      // Unlike a OneSignal failure, nothing parks a signup that never reached the database: it
+      // used to be logged and lost. Slack gets the details so someone can add the person by hand.
+      console.error('Waitlist signup could not be saved:', saveError);
+      const reason = saveError;
+      after(() =>
+        postToSlack(
+          `🚨 *Waitlist signup could not be saved*\n• Name: ${sanitizedData.fullName}\n• Email: ${sanitizedData.email}\n• Profession: ${sanitizedData.profession ?? 'not given'}\n• Error: ${reason}\nAdd them to the waitlist by hand.`
+        )
+      );
       return NextResponse.json({ error: 'Failed to join waitlist' }, { status: 500 });
     }
 
@@ -129,7 +143,7 @@ export async function POST(request: NextRequest) {
         email: sanitizedData.email,
         firstName: nameParts[0] || '',
         lastName: nameParts.slice(1).join(' ') || '',
-        profession: sanitizedData.profession,
+        profession: sanitizedData.profession ?? '',
         monthlyIncome: sanitizedData.monthlyIncome,
       })
     );

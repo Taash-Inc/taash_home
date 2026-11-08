@@ -1,0 +1,10 @@
+# Taash
+
+> Taash is a tax and finance app for Nigeria, launching soon on iOS and Android. It turns income and spending into tax-ready records, estimates tax under the Nigeria Tax Act 2025 (in force from 1 January 2026), and shows how much to set aside. It is built for freelancers, content creators, salary earners and small businesses.
+
+- [Home and free 2026 tax calculator](https://www.taash.tax/): work out personal income tax under the Nigeria Tax Act 2025 for salaried or self-employed income, with pension, NHF, NHIS and rent relief.
+- [Nigeria tax calculator 2026](https://www.taash.tax/tax-calculator): free calculator with the 2026 bands, reliefs, a worked example and FAQs.
+- [Tax guides](https://www.taash.tax/blogs): articles on Nigerian tax for freelancers and creators.
+- [Join the waitlist](https://www.taash.tax/#waitlist): free; early members get a lifetime discount and priority support.
+
+Taash is available in Nigeria first; other African countries are planned. Bank access through Mono is read-only: Taash can never move money. Estimates are not tax advice.

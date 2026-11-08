@@ -74,7 +74,13 @@ export default function Footer() {
         {/* Bottom Row */}
         <div className='flex flex-col items-center justify-between text-sm text-ink-400 md:flex-row'>
           <p>© {currentYear} Taash Technologies Inc. All rights reserved.</p>
-          <nav className='flex items-center gap-6 mt-4 md:mt-0' aria-label='Legal'>
+          <nav className='mt-4 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 md:mt-0' aria-label='Footer'>
+            <Link href='/tax-calculator' className='hover:text-white transition-colors'>
+              Nigeria tax calculator
+            </Link>
+            <Link href='/blogs' className='hover:text-white transition-colors'>
+              Tax guides
+            </Link>
             <Link href='/terms' className='hover:text-white transition-colors'>
               Terms &amp; Conditions
             </Link>

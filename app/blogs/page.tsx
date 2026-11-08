@@ -17,7 +17,8 @@ const gradients = [
 export const revalidate = 3600;
 
 export const metadata = {
-  title: 'Blog - Taash',
+  title: 'Tax guides for freelancers and creators in Nigeria',
+  alternates: { canonical: '/blogs' },
   description:
     'Tax tips, guides, and resources for freelancers and creators in Nigeria. Learn how to manage your taxes the easy way.',
 };

@@ -45,25 +45,29 @@ const request = (body, headers = {}) => new nextServer.NextRequest('https://www.
   body: typeof body === 'string' ? body : JSON.stringify(body),
 });
 const signup = {
-  fullName: 'Ada Obi', email: 'Ada@example.invalid', profession: 'Designer',
+  fullName: 'Ada Obi', email: 'Ada@example.invalid', profession: 'Freelancer',
   monthlyIncome: null, turnstileToken: 'dummy-captcha',
 };
 
 function waitlist(status = 201, errorBody) {
   const writes = [];
+  const slack = [];
   let captchas = 0;
   const route = handler('app/api/waitlist/route.ts', {
     env: { NEXT_PUBLIC_SUPABASE_URL: 'https://db.example.invalid', SUPABASE_SERVICE_KEY: 'dummy-key' },
     providers: {
       '@/lib/turnstile': { verifyTurnstile: async () => { captchas++; return true; } },
-      '@/lib/waitlist-sync': { syncSignup: async () => { throw new Error('Must run after response'); } },
+      '@/lib/waitlist-sync': {
+        syncSignup: async () => { throw new Error('Must run after response'); },
+        postToSlack: async (text) => { slack.push(text); },
+      },
     },
     fetchImpl: async (url, init) => {
       writes.push({ url, init });
       return new Response(errorBody === undefined ? null : JSON.stringify(errorBody), { status });
     },
   });
-  return { ...route, writes, captchas: () => captchas };
+  return { ...route, writes, slack, captchas: () => captchas };
 }
 
 test('retry GET and POST deny missing, blank and wrong secrets before reading the queue', async () => {
@@ -108,6 +112,57 @@ test('signup returns the same public response for a new or existing address', as
   assert.equal(JSON.parse(fresh.writes[0].init.body).email, 'ada@example.invalid');
   assert.equal(fresh.callbacks.length, 1);
   assert.equal(duplicate.callbacks.length, 0);
+});
+
+test('signup accepts a first name and email without profession or income', async () => {
+  for (const extra of [{}, { profession: null }, { profession: '' }]) {
+    const route = waitlist();
+    const { profession: _p, monthlyIncome: _m, ...minimal } = signup;
+    const response = await route.POST(request({ ...minimal, ...extra }));
+    assert.equal(response.status, 201);
+    const row = JSON.parse(route.writes[0].init.body);
+    assert.equal(row.profession, null);
+    assert.equal(row.monthly_income, null);
+    assert.equal(route.callbacks.length, 1);
+  }
+});
+
+test('signup still requires a name and rejects a non-string profession', async () => {
+  const route = waitlist();
+  assert.equal((await route.POST(request({ ...signup, fullName: '' }))).status, 400);
+  assert.equal((await route.POST(request({ ...signup, profession: 42 }))).status, 400);
+  assert.equal((await route.POST(request({ ...signup, profession: 'a'.repeat(101) }))).status, 400);
+  assert.equal(route.writes.length, 0);
+});
+
+test('a signup that cannot be saved alerts Slack, with the details, after the response', async () => {
+  const route = waitlist(500, { code: 'XX000' });
+  const response = await route.POST(request(signup));
+  assert.equal(response.status, 500);
+  assert.equal(route.slack.length, 0, 'the alert must not delay the response');
+  assert.equal(route.callbacks.length, 1);
+  await route.callbacks[0]();
+  assert.equal(route.slack.length, 1);
+  assert.match(route.slack[0], /ada@example\.invalid/);
+  assert.match(route.slack[0], /Ada Obi/);
+  assert.match(route.slack[0], /HTTP 500/);
+});
+
+test('a duplicate signup does not alert Slack', async () => {
+  const route = waitlist(409, { code: '23505' });
+  assert.equal((await route.POST(request(signup))).status, 201);
+  assert.equal(route.callbacks.length, 0);
+});
+
+test('signup accepts only the profession choices the form offers', async () => {
+  for (const profession of ['Freelancer', 'Content creator', 'Small business', 'Salary earner', 'Other']) {
+    assert.equal((await waitlist().POST(request({ ...signup, profession }))).status, 201, profession);
+  }
+  const route = waitlist();
+  for (const profession of ['Designer', "'; DROP TABLE waitlist; --", 'freelancer ']) {
+    assert.equal((await route.POST(request({ ...signup, profession }))).status, 400, profession);
+  }
+  assert.equal(route.writes.length, 0);
 });
 
 test('signup rejects malformed shapes, long fields and oversized bodies before provider calls', async () => {

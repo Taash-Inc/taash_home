@@ -1,4 +1,5 @@
 import Footer from '@/components/Footer';
+import { BlogPostingSchema } from '@/components/StructuredData';
 import Header from '@/components/Header';
 import { getAllPostSlugs, getPostBySlug, urlFor } from '@/lib/sanity';
 import { PortableText, PortableTextComponents } from '@portabletext/react';
@@ -24,14 +25,17 @@ export async function generateMetadata({ params }: PageProps) {
 
   if (!post) {
     return {
-      title: 'Post Not Found - Taash Blog',
+      title: 'Post not found',
+      robots: { index: false },
     };
   }
 
   return {
-    title: `${post.title} - Taash Blog`,
-    description: post.excerpt || 'Read this article on Taash Blog',
+    title: post.title,
+    description: post.excerpt || 'A tax guide from Taash for freelancers, creators and small businesses in Nigeria.',
+    alternates: { canonical: `/blogs/${slug}` },
     openGraph: {
+      type: 'article',
       title: post.title,
       description: post.excerpt,
       images: post.mainImage
@@ -141,6 +145,14 @@ export default async function BlogPostPage({ params }: PageProps) {
   return (
     <>
       <Header />
+      <BlogPostingSchema
+        title={post.title}
+        description={post.excerpt}
+        slug={slug}
+        image={post.mainImage ? urlFor(post.mainImage).width(1200).height(630).url() : undefined}
+        publishedAt={post.publishedAt}
+        author={post.author?.name}
+      />
       <main className='min-h-screen bg-white pt-24'>
         <article className='max-w-3xl mx-auto px-6 py-12'>
           {/* Back link */}
