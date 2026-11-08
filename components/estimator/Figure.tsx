@@ -1,5 +1,5 @@
 /**
- * A monetary figure. Monospaced with tabular figures so digits align across columns —
+ * A monetary figure, in the page's Space Grotesk like the app, with tabular figures so digits align across columns —
  * the comparison in this section is unreadable otherwise, because two numbers meant to be
  * compared sit in different columns (00-audit.md §3, tell 7).
  */
@@ -10,7 +10,7 @@ export function Figure({
   children: React.ReactNode;
   className?: string;
 }) {
-  return <span className={`font-mono tabular-nums tracking-tight ${className}`}>{children}</span>;
+  return <span className={`tabular-nums tracking-tight ${className}`}>{children}</span>;
 }
 
 /**
@@ -28,7 +28,7 @@ export function Figure({
  */
 export function RollingFigure({ value, className = '' }: { value: string; className?: string }) {
   return (
-    <span className={`font-mono tabular-nums tracking-tight ${className}`} aria-hidden='true'>
+    <span className={`tabular-nums tracking-tight ${className}`} aria-hidden='true'>
       {[...value].map((ch, i) =>
         /\d/.test(ch) ? (
           <DigitColumn key={i} digit={Number(ch)} index={i} />

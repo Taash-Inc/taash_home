@@ -44,22 +44,22 @@ export function DeductionsDrawer({
       open={open}
       onClose={onClose}
       title={isCreator ? 'Deductions for creators and the self-employed' : 'Understanding your reliefs'}>
-      <p className='mb-4 text-sm text-ink-300'>
+      <p className='mb-4 text-sm text-ink-700'>
         {isCreator
           ? 'You can deduct legitimate business expenses from your gross income before tax is worked out.'
           : `Under the Nigeria Tax Act 2025 these come off your income before tax is worked out. The old Consolidated Relief Allowance no longer applies from ${TAX_YEAR}.`}
       </p>
       <ul className='space-y-2'>
         {items.map((item) => (
-          <li key={item.title} className='rounded-lg bg-white/[0.04] p-3.5'>
-            <p className='text-sm font-semibold text-white'>{item.title}</p>
-            <p className='mt-0.5 text-xs leading-relaxed text-ink-400'>{item.desc}</p>
+          <li key={item.title} className='rounded-xl bg-ink-50 p-3.5 ring-1 ring-ink-200'>
+            <p className='text-sm font-semibold text-ink-1000'>{item.title}</p>
+            <p className='mt-0.5 text-xs leading-relaxed text-ink-700'>{item.desc}</p>
           </li>
         ))}
       </ul>
-      <div className='mt-5 rounded-xl border border-brand-500/25 bg-brand-500/[0.08] p-4'>
-        <p className='text-sm font-bold text-white'>Keep your records</p>
-        <p className='mt-1 text-sm text-ink-300'>
+      <div className='mt-5 rounded-xl bg-[#fffbe0] p-4 ring-1 ring-[#fbe429]'>
+        <p className='text-sm font-bold text-ink-1000'>Keep your records</p>
+        <p className='mt-1 text-sm text-ink-700'>
           Reliefs have to be claimed with documentation. Taash tracks your income and expenses
           through the year so the records are there when you need them.
         </p>

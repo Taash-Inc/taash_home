@@ -12,7 +12,7 @@ function sanitize(input: string, maxLength: number = 255): string {
 async function insertToSupabase(data: {
   full_name: string;
   email: string;
-  profession: string;
+  profession: string | null;
   monthly_income: string | null;
 }) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     if (
       typeof fullName !== 'string' || fullName.length > 100 ||
       typeof email !== 'string' || email.length > 255 ||
-      typeof profession !== 'string' || profession.length > 100 ||
+      (profession != null && (typeof profession !== 'string' || profession.length > 100)) ||
       (monthlyIncome != null && (typeof monthlyIncome !== 'string' || monthlyIncome.length > 50))
     ) {
       return NextResponse.json({ error: 'Invalid input data' }, { status: 400 });
@@ -76,8 +76,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'CAPTCHA verification failed' }, { status: 400 });
     }
 
-    // Validate required fields
-    if (!fullName || !email || !profession) {
+    // Validate required fields. Profession became optional: the forms now ask only for a first
+    // name and an email, with profession as an optional one-tap choice.
+    if (!fullName || !email) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -85,12 +86,12 @@ export async function POST(request: NextRequest) {
     const sanitizedData = {
       fullName: sanitize(fullName, 100),
       email: sanitize(email, 255).toLowerCase(),
-      profession: sanitize(profession, 100),
+      profession: profession ? sanitize(profession, 100) || null : null,
       monthlyIncome: monthlyIncome ? sanitize(monthlyIncome, 50) : null,
     };
 
     // Validate sanitized data isn't empty
-    if (!sanitizedData.fullName || !sanitizedData.email || !sanitizedData.profession) {
+    if (!sanitizedData.fullName || !sanitizedData.email) {
       return NextResponse.json({ error: 'Invalid input data' }, { status: 400 });
     }
 
@@ -129,7 +130,7 @@ export async function POST(request: NextRequest) {
         email: sanitizedData.email,
         firstName: nameParts[0] || '',
         lastName: nameParts.slice(1).join(' ') || '',
-        profession: sanitizedData.profession,
+        profession: sanitizedData.profession ?? '',
         monthlyIncome: sanitizedData.monthlyIncome,
       })
     );

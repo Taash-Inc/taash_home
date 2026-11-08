@@ -1,11 +1,10 @@
 import {
-  BreadcrumbSchema,
-  FAQSchema,
   OrganizationSchema,
   SoftwareApplicationSchema,
   WebsiteSchema,
 } from '@/components/StructuredData';
 import SiteAnalytics from '@/components/SiteAnalytics';
+import { SITE_URL } from '@/lib/site';
 import type { Metadata, Viewport } from 'next';
 import { JetBrains_Mono, Space_Grotesk } from 'next/font/google';
 import './globals.css';
@@ -27,33 +26,29 @@ const jetbrainsMono = JetBrains_Mono({
   preload: false,
 });
 
-// Base URL for the site
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.taash.tax';
+const siteUrl = SITE_URL;
+const title = 'Taash: Tax App and 2026 Tax Calculator for Nigeria';
+const description =
+  'Free 2026 tax calculator for Nigeria. Taash tracks your income and expenses and keeps freelancers, creators and small businesses tax-ready. Join the waitlist.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: 'Taash - Effortless Tax & Finance for Nigerian Freelancers',
+    default: title,
     template: '%s | Taash',
   },
-  description:
-    'AI-powered platform helping Nigerian freelancers, creators, and small businesses track expenses, estimate taxes, and save smarter. Join the waitlist for early access.',
+  description,
   keywords: [
-    'tax software Africa',
-    'freelancer tax calculator',
-    'Nigerian tax calculator',
-    'African freelancer finance',
-    'expense tracking Africa',
-    'tax compliance Nigeria',
-    'tax compliance Ghana',
-    'tax compliance Kenya',
-    'tax compliance South Africa',
-    'SME tax software',
-    'creator tax tools',
-    'AI tax estimator',
-    'freelance income tracker',
-    'TIN registration Africa',
-    'small business tax Africa',
+    'tax app Nigeria',
+    'Nigeria tax calculator 2026',
+    'PAYE calculator Nigeria',
+    'Nigeria Tax Act 2025',
+    'freelancer tax Nigeria',
+    'creator tax Nigeria',
+    'small business tax Nigeria',
+    'expense tracker Nigeria',
+    'rent relief Nigeria',
+    'tax app Africa',
   ],
   authors: [{ name: 'Taash Technologies Inc.' }],
   creator: 'Taash Technologies Inc.',
@@ -74,12 +69,11 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: 'website',
-    locale: 'en_US',
+    locale: 'en_NG',
     url: siteUrl,
     siteName: 'Taash',
-    title: 'Taash - Effortless Tax & Finance for Nigerian Freelancers',
-    description:
-      'AI-powered platform helping Nigerian freelancers, creators, and small businesses track expenses, estimate taxes, and save smarter.',
+    title,
+    description,
     images: [
       {
         url: '/og-image.png?v=2',
@@ -91,11 +85,10 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Taash - Effortless Tax & Finance for Nigerian Freelancers',
-    description:
-      'AI-powered platform helping Nigerian freelancers track expenses, estimate taxes, and save smarter.',
+    title,
+    description,
     images: ['/og-image.png?v=2'],
-    creator: '@taaborafrica',
+    creator: '@taashapp',
   },
   robots: {
     index: true,
@@ -107,9 +100,6 @@ export const metadata: Metadata = {
       'max-image-preview': 'large',
       'max-snippet': -1,
     },
-  },
-  alternates: {
-    canonical: siteUrl,
   },
   category: 'Finance',
 };
@@ -130,7 +120,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang='en' className={`${spaceGrotesk.variable} ${jetbrainsMono.variable}`}>
+    <html lang='en-NG' className={`${spaceGrotesk.variable} ${jetbrainsMono.variable}`}>
       <head>
         <meta
           name='google-site-verification'
@@ -141,8 +131,6 @@ export default function RootLayout({
         <OrganizationSchema />
         <WebsiteSchema />
         <SoftwareApplicationSchema />
-        <FAQSchema />
-        <BreadcrumbSchema />
       </head>
       <body className='font-sans antialiased'>
         {children}

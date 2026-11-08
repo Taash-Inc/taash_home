@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'Terms & Conditions | Taash',
+  title: 'Terms & Conditions',
+  alternates: { canonical: '/terms' },
   description: 'Terms and Conditions for using Taash financial management services.',
 };
 

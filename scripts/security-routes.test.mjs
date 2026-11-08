@@ -110,6 +110,27 @@ test('signup returns the same public response for a new or existing address', as
   assert.equal(duplicate.callbacks.length, 0);
 });
 
+test('signup accepts a first name and email without profession or income', async () => {
+  for (const extra of [{}, { profession: null }, { profession: '' }]) {
+    const route = waitlist();
+    const { profession: _p, monthlyIncome: _m, ...minimal } = signup;
+    const response = await route.POST(request({ ...minimal, ...extra }));
+    assert.equal(response.status, 201);
+    const row = JSON.parse(route.writes[0].init.body);
+    assert.equal(row.profession, null);
+    assert.equal(row.monthly_income, null);
+    assert.equal(route.callbacks.length, 1);
+  }
+});
+
+test('signup still requires a name and rejects a non-string profession', async () => {
+  const route = waitlist();
+  assert.equal((await route.POST(request({ ...signup, fullName: '' }))).status, 400);
+  assert.equal((await route.POST(request({ ...signup, profession: 42 }))).status, 400);
+  assert.equal((await route.POST(request({ ...signup, profession: 'a'.repeat(101) }))).status, 400);
+  assert.equal(route.writes.length, 0);
+});
+
 test('signup rejects malformed shapes, long fields and oversized bodies before provider calls', async () => {
   const route = waitlist();
   for (const body of [

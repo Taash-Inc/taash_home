@@ -86,16 +86,16 @@ export function Drawer({
         aria-modal='true'
         aria-labelledby={titleId}
         tabIndex={-1}
-        className='relative flex h-full w-full max-w-lg flex-col border-l border-white/10 bg-ink-950 shadow-[0_24px_64px_-16px_rgb(15_23_42/0.6)] focus:outline-none max-sm:mt-auto max-sm:h-auto max-sm:max-h-[85vh] max-sm:w-full max-sm:max-w-none max-sm:rounded-t-2xl max-sm:border-l-0'>
-        <div className='flex items-start justify-between gap-4 border-b border-white/10 px-6 py-5'>
-          <h3 id={titleId} className='text-xl font-bold text-white'>
+        className='relative flex h-full w-full max-w-lg flex-col border-l border-ink-200 bg-white text-ink-1000 shadow-[0_24px_64px_-16px_rgb(15_23_42/0.6)] focus:outline-none max-sm:mt-auto max-sm:h-auto max-sm:max-h-[85vh] max-sm:w-full max-sm:max-w-none max-sm:rounded-t-2xl max-sm:border-l-0'>
+        <div className='flex items-start justify-between gap-4 border-b border-ink-200 px-6 py-5'>
+          <h3 id={titleId} className='text-xl font-bold text-ink-1000'>
             {title}
           </h3>
           <button
             type='button'
             onClick={onClose}
             aria-label={`Close ${title.toLowerCase()}`}
-            className='-m-2 grid h-11 w-11 shrink-0 place-items-center rounded-full text-ink-300 transition-colors hover:bg-white/10 hover:text-white'>
+            className='-m-2 grid h-11 w-11 shrink-0 place-items-center rounded-full text-ink-600 transition-colors hover:bg-ink-100 hover:text-ink-1000'>
             <svg width='20' height='20' viewBox='0 0 20 20' fill='none' aria-hidden='true'>
               <path
                 d='M5 5l10 10M15 5L5 15'
@@ -107,11 +107,11 @@ export function Drawer({
           </button>
         </div>
         <div className='min-h-0 flex-1 overflow-y-auto px-6 py-5'>{children}</div>
-        <div className='border-t border-white/10 px-6 py-4'>
+        <div className='border-t border-ink-200 px-6 py-4'>
           <button
             type='button'
             onClick={onClose}
-            className='min-h-11 w-full rounded-lg bg-brand-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-brand-700'>
+            className='min-h-11 w-full rounded-full bg-ink-1000 px-4 py-3 font-semibold text-white transition-colors hover:bg-ink-900'>
             Got it
           </button>
         </div>

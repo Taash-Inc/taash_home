@@ -269,3 +269,129 @@ html {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* ── Hero and waitlist motion ────────────────────────────────────────────────
+   transform and opacity only, so nothing triggers layout on low-end Android.
+   The H1 is deliberately not animated: it is the mobile LCP element, and an
+   opacity fade would delay LCP by the length of the fade. The reduced-motion
+   rule above collapses all of these to their end state. */
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.hero-rise {
+  animation: hero-rise 640ms var(--ease-settle) both;
+  animation-delay: var(--rise-delay, 0ms);
+}
+
+/* A small "live" signal for badges: a steady dot with a ring that breathes out three times
+   and stops. Endless motion would need a pause control (WCAG 2.2.2). */
+.live-dot {
+  position: relative;
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  background: var(--color-positive-500);
+}
+
+.live-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: inherit;
+  animation: live-ring 2.4s var(--ease-settle) 3;
+}
+
+@keyframes live-ring {
+  0% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  70%,
+  100% {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+/* Success: the panel settles in and the tick draws itself. */
+.joined-in {
+  animation: joined-in 520ms var(--ease-settle) both;
+}
+
+@keyframes joined-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.joined-tick {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  animation: joined-tick 460ms var(--ease-settle) 180ms forwards;
+}
+
+@keyframes joined-tick {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ── Hero phone ──────────────────────────────────────────────────────────────
+   Floating cards pop in once. The phone's own demo lives in
+   components/hero/PhoneDemo.module.css. */
+.hero-pop {
+  animation: hero-pop 560ms var(--ease-settle) both;
+  animation-delay: var(--rise-delay, 0ms);
+}
+
+@keyframes hero-pop {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The global reduced-motion rule shortens durations but keeps delays, which would show the
+   "before" state and then jump. Drop the delays so these users get the end state at once. */
+@media (prefers-reduced-motion: reduce) {
+  .hero-rise,
+  .hero-pop,
+  .joined-tick {
+    animation-delay: 0s !important;
+  }
+}
+
+/* Hero tour: a chapter tab's progress bar fills over the chapter's length. Its play state is
+   set inline, so it pauses with the tour. */
+.tour-fill {
+  animation: tour-fill var(--tour-ms, 10s) linear both;
+}
+
+@keyframes tour-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: none;
+  }
+}
