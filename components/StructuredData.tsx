@@ -36,9 +36,9 @@ export function OrganizationSchema() {
           'Taash is a tax and finance app that helps freelancers, creators, salary earners and small businesses in Nigeria track income and expenses and stay tax-ready.',
         areaServed: { '@type': 'Country', name: 'Nigeria' },
         sameAs: [
-          'https://x.com/taashapp',
+          'https://x.com/taashtax',
           'https://www.linkedin.com/company/taash-technologies-inc/',
-          'https://www.instagram.com/taashapp/',
+          'https://www.instagram.com/taash.tax/',
           'https://www.facebook.com/profile.php?id=61585718545111',
           'https://www.youtube.com/@taashapp',
         ],
