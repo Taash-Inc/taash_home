@@ -188,9 +188,10 @@ body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
-html {
-  scroll-behavior: smooth;
-}
+/* No `scroll-behavior: smooth` on <html>. It also animated the scrolls the browser and Next.js
+   make when changing page: tapping the logo on an article glided down to the footer on iOS
+   Safari, and Back glided through the whole homepage before landing. Page changes and Back
+   now land instantly; in-page links jump, which is the browser default. */
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
