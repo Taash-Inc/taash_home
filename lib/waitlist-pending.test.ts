@@ -8,17 +8,21 @@ vi.mock('./waitlist-sync', async (importOriginal) => ({
   postToSlack,
 }));
 
-const { GLOBAL_LIMIT, PER_IP_LIMIT, approvePending, approveUrl, checkPendingLimits, discardPending, savePending } =
-  await import('./waitlist-pending');
+const { alertRateLimit, approvePending, approveUrl, discardPending, getPending, savePending } = await import('./waitlist-pending');
 const { checkApproval } = await import('./signing');
 
 const DB = 'https://db.example.supabase.co';
 const ID = '3f1c2b4a-1d2e-4f5a-8b9c-0d1e2f3a4b5c';
 const ROW = { id: ID, full_name: 'Ada Obi', email: 'ada@example.com', profession: null, monthly_income: null, reason: 'no-token:pending' };
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status });
-const counted = (total: number) => new Response(null, { status: 200, headers: { 'content-range': `*/${total}` } });
 
 let fetchMock: ReturnType<typeof vi.fn<typeof fetch>>;
+const calls = () =>
+  fetchMock.mock.calls.map(([url, init]) => {
+    const u = new URL(String(url));
+    return `${init?.method ?? 'GET'} ${u.pathname.replace('/rest/v1/', '')}${u.search ? `?${decodeURIComponent(u.searchParams.toString())}` : ''}`;
+  });
+
 beforeEach(() => {
   vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', DB);
   vi.stubEnv('SUPABASE_SERVICE_KEY', 'service-key');
@@ -52,32 +56,28 @@ describe('savePending', () => {
     expect(await savePending(signup)).toEqual({ saved: false, duplicate: true });
   });
 
+  // PR #60 review: the limits were counted before the insert, so simultaneous requests all saw
+  // room and all got in. The database now enforces them atomically in the insert itself
+  // (supabase/migrations/20261113190000_waitlist_pending.sql) and answers with this error.
+  it.each(['ip', 'global'] as const)('reports the database refusing a signup over the %s limit', async (scope) => {
+    fetchMock.mockResolvedValueOnce(json(400, { code: 'P0001', message: `rate_limited:${scope}` }));
+    expect(await savePending(signup)).toEqual({ saved: false, rateLimited: scope });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('reports other failures so the route can alert with the details', async () => {
     fetchMock.mockResolvedValueOnce(json(404, { code: '42P01' }));
     expect(await savePending(signup)).toEqual({ saved: false, error: 'Pending insert failed: HTTP 404 (42P01)' });
   });
 });
 
-describe('checkPendingLimits', () => {
-  it(`allows an IP up to ${PER_IP_LIMIT} unverified signups an hour, then blocks it and alerts once`, async () => {
-    fetchMock.mockImplementation(async (url) => (String(url).includes('ip_hash=') ? counted(PER_IP_LIMIT - 1) : counted(3)));
-    expect(await checkPendingLimits('ip-a', 1_000_000)).toEqual({ allowed: true });
-
-    fetchMock.mockImplementation(async (url) => (String(url).includes('ip_hash=') ? counted(PER_IP_LIMIT) : counted(3)));
-    expect(await checkPendingLimits('ip-a', 2_000_000)).toEqual({ allowed: false, scope: 'ip' });
-    expect(await checkPendingLimits('ip-a', 2_000_001)).toEqual({ allowed: false, scope: 'ip' });
-    expect(postToSlack).toHaveBeenCalledTimes(1);
-  });
-
-  it(`pauses all unverified signups past ${GLOBAL_LIMIT} an hour`, async () => {
-    fetchMock.mockImplementation(async (url) => (String(url).includes('ip_hash=') ? counted(0) : counted(GLOBAL_LIMIT)));
-    expect(await checkPendingLimits('ip-b', 9_000_000)).toEqual({ allowed: false, scope: 'global' });
-  });
-
-  it('lets the signup through and logs it when Supabase cannot count', async () => {
-    fetchMock.mockResolvedValue(json(500, {}));
-    expect(await checkPendingLimits('ip-c')).toEqual({ allowed: true });
-    expect(String(vi.mocked(console.error).mock.calls[0][0])).toContain('waitlist.limit_check_failed');
+describe('alertRateLimit', () => {
+  it('alerts Slack at most once per limit per 30 minutes', async () => {
+    await alertRateLimit('ip', 100_000_000);
+    await alertRateLimit('ip', 100_000_001);
+    await alertRateLimit('global', 100_000_002);
+    await alertRateLimit('ip', 100_000_000 + 31 * 60 * 1000);
+    expect(postToSlack).toHaveBeenCalledTimes(3);
   });
 });
 
@@ -91,40 +91,63 @@ describe('approval', () => {
     expect(url.search).not.toContain('ada');
   });
 
-  it('moves the signup onto the waitlist, sends the welcome email, and removes it from pending', async () => {
+  it('only shows signups that are still waiting', async () => {
+    fetchMock.mockResolvedValueOnce(json(200, [ROW]));
+    await getPending(ID);
+    expect(calls()[0]).toContain('status=eq.pending');
+  });
+
+  it('claims the signup first, then adds it to the waitlist and sends the welcome email', async () => {
     fetchMock
       .mockResolvedValueOnce(json(200, [ROW]))
-      .mockResolvedValueOnce(new Response(null, { status: 201 }))
-      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+      .mockResolvedValueOnce(new Response(null, { status: 201 }));
     const result = await approvePending(ID);
     expect(result.status).toBe('approved');
-    const calls = fetchMock.mock.calls.map(([url, init]) => `${init?.method ?? 'GET'} ${String(url).split('?')[0]}`);
-    expect(calls).toEqual([
-      `GET ${DB}/rest/v1/waitlist_pending`,
-      `POST ${DB}/rest/v1/waitlist`,
-      `DELETE ${DB}/rest/v1/waitlist_pending`,
-    ]);
+    const [claim, insert] = calls();
+    expect(claim).toMatch(/^PATCH waitlist_pending\?id=eq\.[0-9a-f-]+&status=eq\.pending/);
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toMatchObject({ status: 'approved' });
+    expect(insert).toBe('POST waitlist');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(syncSignup).toHaveBeenCalledWith(expect.objectContaining({ email: 'ada@example.com', firstName: 'Ada', lastName: 'Obi' }));
   });
 
-  it('does not email again someone who was already on the waitlist', async () => {
+  // PR #60 review: approve read the row, then inserted, then deleted, so a discard landing in
+  // between was overridden. The claim is a single conditional update: only one action wins.
+  it('does nothing if the signup was discarded (or approved) a moment earlier', async () => {
+    fetchMock.mockResolvedValueOnce(json(200, []));
+    expect((await approvePending(ID)).status).toBe('missing');
+    expect(calls()).toHaveLength(1);
+    expect(syncSignup).not.toHaveBeenCalled();
+  });
+
+  it('puts the signup back in the queue when the waitlist insert fails, so nobody is lost', async () => {
     fetchMock
       .mockResolvedValueOnce(json(200, [ROW]))
-      .mockResolvedValueOnce(json(409, { code: '23505' }))
-      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+      .mockResolvedValueOnce(json(500, {}))
+      .mockResolvedValueOnce(json(200, [ROW]));
+    expect((await approvePending(ID)).status).toBe('error');
+    const restore = fetchMock.mock.calls[2];
+    expect(calls()[2]).toMatch(/^PATCH waitlist_pending\?id=eq\./);
+    expect(JSON.parse(String(restore[1]?.body))).toEqual({ status: 'pending', handled_at: null });
+  });
+
+  it('does not email again someone who was already on the waitlist', async () => {
+    fetchMock.mockResolvedValueOnce(json(200, [ROW])).mockResolvedValueOnce(json(409, { code: '23505' }));
     expect((await approvePending(ID)).status).toBe('already-on-list');
     expect(syncSignup).not.toHaveBeenCalled();
   });
 
-  it('keeps the pending row when the waitlist insert fails, so nobody is lost', async () => {
-    fetchMock.mockResolvedValueOnce(json(200, [ROW])).mockResolvedValueOnce(json(500, {}));
-    expect((await approvePending(ID)).status).toBe('error');
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+  // PR #60 review: deleting handled rows removed them from the hourly count. Rows are now kept
+  // and marked, and the database counts every row created in the last hour.
+  it('marks a discarded signup instead of deleting it', async () => {
+    fetchMock.mockResolvedValueOnce(json(200, [ROW]));
+    expect(await discardPending(ID)).toBe('discarded');
+    expect(calls()[0]).toMatch(/^PATCH waitlist_pending\?id=eq\.[0-9a-f-]+&status=eq\.pending/);
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toMatchObject({ status: 'discarded' });
+    expect(calls().some((c) => c.startsWith('DELETE'))).toBe(false);
   });
 
-  it('reports a signup that was already handled', async () => {
-    fetchMock.mockResolvedValueOnce(json(200, []));
-    expect((await approvePending(ID)).status).toBe('missing');
+  it('reports a discard that lost the race as already handled', async () => {
     fetchMock.mockResolvedValueOnce(json(200, []));
     expect(await discardPending(ID)).toBe('missing');
   });

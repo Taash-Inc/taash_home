@@ -22,13 +22,15 @@ export const MAX_REASON = 160;
 
 /**
  * Remove anything that could identify a person from error text before it leaves the browser:
- * email addresses, long digit runs (phone, card or account numbers), URLs with query strings
- * and tokens. Keeps enough of the message to know what broke.
+ * email addresses, long digit runs (phone, card or account numbers), query strings and fragments
+ * on any link, and tokens. Keeps enough of the message to know what broke.
  */
 export function scrub(text: string): string {
   return text
     .replace(/[^\s@]+@[^\s@]+/g, '[email]')
-    .replace(/https?:\/\/[^\s?#]+[?#]\S*/g, (url) => `${url.split(/[?#]/)[0]}?[…]`)
+    // Any link, absolute or relative (/email-preferences?t=… carries a private token): keep
+    // the path, drop the query string and fragment.
+    .replace(/(\/[^\s?#]*)[?#]\S*/g, '$1?[…]')
     .replace(/\b[A-Za-z0-9_-]{32,}\b/g, '[token]')
     .replace(/\d{4,}/g, '[number]')
     .replace(/\s+/g, ' ')

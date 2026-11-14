@@ -49,11 +49,12 @@ const signup = {
   monthlyIncome: null, turnstileToken: 'dummy-captcha',
 };
 
-function waitlist(status = 201, errorBody, { captcha = true, limit = { allowed: true }, pendingResult } = {}) {
+function waitlist(status = 201, errorBody, { captcha = true, pendingResult } = {}) {
   const writes = [];
   const slack = [];
   const announced = [];
   const pending = [];
+  const limitAlerts = [];
   let captchas = 0;
   const route = handler('app/api/waitlist/route.ts', {
     env: { NEXT_PUBLIC_SUPABASE_URL: 'https://db.example.invalid', SUPABASE_SERVICE_KEY: 'dummy-key' },
@@ -61,7 +62,8 @@ function waitlist(status = 201, errorBody, { captcha = true, limit = { allowed: 
       '@/lib/turnstile': { verifyTurnstile: async () => { captchas++; return captcha; } },
       '@/lib/signing': { clientIp: () => '102.89.1.2', hashIp: () => 'ip-hash', refFor: () => 'ref123' },
       '@/lib/waitlist-pending': {
-        checkPendingLimits: async () => limit,
+        // Never settles: a 429 must not wait on the Slack alert.
+        alertRateLimit: (scope) => { limitAlerts.push(scope); return new Promise(() => {}); },
         savePending: async (row) => { pending.push(row); return pendingResult ?? { saved: true, id: 'pending-1' }; },
         approveUrl: (id) => `https://www.taash.tax/api/waitlist/approve?id=${id}&exp=1&sig=s`,
       },
@@ -76,7 +78,7 @@ function waitlist(status = 201, errorBody, { captcha = true, limit = { allowed: 
       return new Response(errorBody === undefined ? null : JSON.stringify(errorBody), { status });
     },
   });
-  return { ...route, writes, slack, announced, pending, captchas: () => captchas };
+  return { ...route, writes, slack, announced, pending, limitAlerts, captchas: () => captchas };
 }
 
 test('retry GET and POST deny missing, blank and wrong secrets before reading the queue', async () => {
@@ -322,16 +324,20 @@ test('a filled-in hidden field is answered like a signup but nothing is saved or
   assert.equal(route.writes.length + route.pending.length + route.callbacks.length + route.captchas(), 0);
 });
 
-test('unverified signups over the rate limit are refused without saving', async () => {
-  const route = waitlist(201, undefined, { limit: { allowed: false, scope: 'ip' } });
+// PR #60 review: the limit alert was awaited before the 429, and Slack had no timeout.
+test('over the limit, the visitor is told at once and Slack is alerted afterwards', async () => {
+  const route = waitlist(201, undefined, { pendingResult: { saved: false, rateLimited: 'ip' } });
   const response = await route.POST(request({ ...signup, turnstileToken: null, check: 'error' }));
   assert.equal(response.status, 429);
   assert.match((await response.json()).error, /try again/i);
-  assert.equal(route.pending.length, 0);
+  assert.equal(route.limitAlerts.length, 0, 'the alert must not delay the response');
+  assert.equal(route.callbacks.length, 1);
+  void route.callbacks[0]();
+  assert.deepEqual(route.limitAlerts, ['ip']);
 });
 
-test('verified signups never touch the pending table or its limits', async () => {
-  const route = waitlist(201, undefined, { limit: { allowed: false, scope: 'global' } });
+test('verified signups never touch the pending table', async () => {
+  const route = waitlist(201, undefined, { pendingResult: { saved: false, rateLimited: 'global' } });
   assert.equal((await route.POST(request(signup))).status, 201);
   assert.equal(route.pending.length, 0);
   assert.equal(route.writes.length, 1);
@@ -374,14 +380,17 @@ test('browser reports are only accepted from our own pages, in the expected shap
   assert.equal(route.slack.length, 0);
 });
 
-test('a browser report reaches Slack scrubbed, and an identical repeat is muted', async () => {
+test('a browser report reaches Slack scrubbed, after the response, and an identical repeat is muted', async () => {
   const route = clientReport();
-  const report = { type: 'js-error', reason: 'Failed for ada@example.com card 4111111111111111', source: 'page.js:12', path: '/' };
+  const report = { type: 'js-error', reason: 'Failed for ada@example.com card 4111111111111111 at /email-preferences?t=secret', source: 'page.js:12', path: '/' };
   assert.equal((await route.POST(request(report, fromSite))).status, 204);
   assert.equal((await route.POST(request(report, fromSite))).status, 204);
+  assert.equal(route.slack.length, 0, 'Slack is posted after the response');
+  for (const callback of route.callbacks) await callback();
   assert.equal(route.slack.length, 1);
   assert.doesNotMatch(route.slack[0], /ada@example\.com|4111/);
   assert.match(route.slack[0], /\[email\]/);
+  assert.doesNotMatch(route.slack[0], /t=secret/);
 });
 
 function approve({ check = 'ok', row = { id: '3f1c2b4a-1d2e-4f5a-8b9c-0d1e2f3a4b5c', full_name: 'Ada Obi', email: 'ada@example.invalid', profession: null, reason: 'no-token:pending' } } = {}) {

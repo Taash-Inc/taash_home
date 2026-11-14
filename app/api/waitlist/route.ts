@@ -3,7 +3,7 @@ import { isProfession } from '@/lib/professions';
 import { readJsonObject, RequestInputError } from '@/lib/request-json';
 import { clientIp, hashIp, refFor } from '@/lib/signing';
 import { verifyTurnstile } from '@/lib/turnstile';
-import { approveUrl, checkPendingLimits, savePending } from '@/lib/waitlist-pending';
+import { alertRateLimit, approveUrl, savePending } from '@/lib/waitlist-pending';
 import { announceSignup, postToSlack, syncSignup } from '@/lib/waitlist-sync';
 import { isClientCheck } from '@/lib/waitlist-verify';
 import { after, NextRequest, NextResponse } from 'next/server';
@@ -191,15 +191,16 @@ type Signup = { fullName: string; email: string; profession: string | null; mont
 /** The check didn't pass: keep them for approval instead of turning them away. */
 async function holdForApproval(signup: Signup, reason: string, ref: string, headers: Headers) {
   const ipHash = hashIp(clientIp(headers));
-  const limit = await checkPendingLimits(ipHash);
-  if (!limit.allowed) {
+  // The database enforces the hourly limits inside this insert (see lib/waitlist-pending.ts).
+  const result = await savePending({ ...signup, reason, ipHash });
+  if (!result.saved && 'rateLimited' in result) {
+    logEvent('warn', 'waitlist.rate_limited', { ref, scope: result.rateLimited });
+    after(() => alertRateLimit(result.rateLimited));
     return NextResponse.json(
       { error: 'Too many signups right now. Please try again in a few minutes.' },
       { status: 429 }
     );
   }
-
-  const result = await savePending({ ...signup, reason, ipHash });
   if (!result.saved && 'duplicate' in result) {
     logEvent('info', 'waitlist.pending_duplicate', { ref, reason });
     return NextResponse.json(JOINED, { status: 201 });

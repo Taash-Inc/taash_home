@@ -89,6 +89,71 @@ begin
 end;
 $$;
 
+-- Unverified signups: the database enforces the hourly limits inside the insert, handled
+-- rows keep counting, and only one open signup per email exists at a time.
+set role service_role;
+do $$
+declare i integer; claimed integer;
+begin
+  for i in 1..5 loop
+    insert into public.waitlist_pending (full_name, email, reason, ip_hash)
+    values ('Held', 'p' || i || '@example.invalid', 'no-token:pending', 'same-ip');
+  end loop;
+  update public.waitlist_pending set status = 'discarded', handled_at = now()
+  where email = 'p1@example.invalid';
+  begin
+    insert into public.waitlist_pending (full_name, email, reason, ip_hash)
+    values ('Held', 'p6@example.invalid', 'no-token:pending', 'same-ip');
+    raise exception 'Per-IP limit not enforced (a discarded row stopped counting)';
+  exception when raise_exception then
+    if sqlerrm <> 'rate_limited:ip' then raise; end if;
+  end;
+
+  -- A discarded email may try again, but never twice at once.
+  insert into public.waitlist_pending (full_name, email, reason, ip_hash)
+  values ('Held', 'p1@example.invalid', 'no-token:pending', 'other-ip');
+  begin
+    insert into public.waitlist_pending (full_name, email, reason, ip_hash)
+    values ('Held', 'p1@example.invalid', 'no-token:pending', 'third-ip');
+    raise exception 'Two open signups for one email';
+  exception when unique_violation then null;
+  end;
+
+  -- 6 rows so far; fill to 40 from different IPs, then the next one is refused.
+  for i in 7..40 loop
+    insert into public.waitlist_pending (full_name, email, reason, ip_hash)
+    values ('Held', 'p' || i || '@example.invalid', 'no-token:pending', 'ip-' || i);
+  end loop;
+  begin
+    insert into public.waitlist_pending (full_name, email, reason, ip_hash)
+    values ('Held', 'p41@example.invalid', 'no-token:pending', 'fresh-ip');
+    raise exception 'Global limit not enforced';
+  exception when raise_exception then
+    if sqlerrm <> 'rate_limited:global' then raise; end if;
+  end;
+
+  -- Approve/discard claim: only a row that is still pending can change.
+  update public.waitlist_pending set status = 'approved'
+  where email = 'p1@example.invalid' and status = 'pending';
+  get diagnostics claimed = row_count;
+  if claimed <> 1 then raise exception 'First claim failed'; end if;
+  update public.waitlist_pending set status = 'discarded'
+  where email = 'p1@example.invalid' and status = 'pending';
+  get diagnostics claimed = row_count;
+  if claimed <> 0 then raise exception 'Second claim on a handled row succeeded'; end if;
+end;
+$$;
+delete from public.waitlist_pending;
+reset role;
+do $$
+begin
+  if has_function_privilege('anon', 'public.waitlist_pending_rate_limit()', 'EXECUTE')
+     or has_function_privilege('authenticated', 'public.waitlist_pending_rate_limit()', 'EXECUTE') then
+    raise exception 'Browser roles can execute the rate-limit function';
+  end if;
+end;
+$$;
+
 -- RLS still denies reads/writes if a future migration accidentally restores DML grants.
 begin;
 grant select, insert, update, delete on all tables in schema public to anon, authenticated;
@@ -117,4 +182,4 @@ begin
   end if;
 end;
 $$;
-select 'PASS: browser CRUD/TRUNCATE denied; RLS denies; server signup and backup work; future grants denied' as result;
+select 'PASS: browser CRUD/TRUNCATE denied; RLS denies; server signup and backup work; pending limits and claims hold; future grants denied' as result;

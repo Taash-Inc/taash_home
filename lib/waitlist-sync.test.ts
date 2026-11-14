@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { announceSignup, retryFailedSync, type FailedSync } from './waitlist-sync';
+import { announceSignup, postToSlack, retryFailedSync, type FailedSync } from './waitlist-sync';
 
 const SUPABASE = 'https://db.example.supabase.co';
 const ONESIGNAL = 'https://api.onesignal.com';
@@ -180,5 +180,22 @@ describe('announceSignup', () => {
     );
     await announceSignup(ADA);
     expect(signal).toBeInstanceOf(AbortSignal);
+  });
+});
+
+// PR #60 review: the webhook call had no timeout, so a stalled Slack could hold a signup
+// response (and the function) open until Vercel's limit.
+describe('postToSlack', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it('gives up on a stalled webhook instead of hanging', async () => {
+    vi.stubEnv('SLACK_WEBHOOK_URL', 'https://hooks.slack.invalid/T/B/x');
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('ok'));
+    vi.stubGlobal('fetch', fetchImpl);
+    await postToSlack('hello');
+    expect(fetchImpl.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
   });
 });

@@ -11,6 +11,14 @@ describe('scrub', () => {
     );
   });
 
+  // PR #60 review: only absolute URLs lost their query string, so a relative link such as
+  // /email-preferences?t=… (the private unsubscribe token) went to the logs and Slack intact.
+  it('removes query strings and fragments from relative links too', () => {
+    expect(scrub('/email-preferences?t=secret')).toBe('/email-preferences?[…]');
+    expect(scrub('Failed to load /email-preferences?t=abc123 (404)')).toBe('Failed to load /email-preferences?[…] (404)');
+    expect(scrub('chunk /_next/static/x.js#frag')).toBe('chunk /_next/static/x.js?[…]');
+  });
+
   it('keeps short, useful error text and caps the length', () => {
     expect(scrub("Cannot read properties of undefined (reading 'map')")).toBe(
       "Cannot read properties of undefined (reading 'map')"

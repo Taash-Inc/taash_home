@@ -2,7 +2,7 @@ import { browserOf, isReportType, scrub } from '@/lib/client-report';
 import { logEvent } from '@/lib/log';
 import { readJsonObject, RequestInputError } from '@/lib/request-json';
 import { postToSlack } from '@/lib/waitlist-sync';
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 
 const PLACEMENTS = new Set(['hero', 'section', 'calculator']);
 const SLACK_REPEAT_MS = 15 * 60 * 1000;
@@ -48,9 +48,10 @@ export async function POST(request: NextRequest) {
   logEvent('error', 'client.report', report);
 
   if (slackAllowed(`${report.type}:${report.reason}`, Date.now())) {
-    await postToSlack(
+    // After the response: the browser never waits on Slack.
+    after(() => postToSlack(
       `${report.type === 'signup-failed' ? '🚨 *A visitor could not reach the signup*' : '⚠️ *Error on the website*'}\n• What: ${report.type}, ${report.reason}${report.placement ? `\n• Form: ${report.placement}` : ''}${report.source ? `\n• Where: ${report.source}` : ''}\n• Page: ${report.path ?? 'unknown'}\n• Browser: ${report.browser}\nRepeats of this exact problem are muted for 15 minutes; all of them are in the Vercel logs (\`client.report\`).`
-    );
+    ));
   }
   return new NextResponse(null, { status: 204 });
 }

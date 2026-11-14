@@ -6,14 +6,23 @@ import { headers, postToSlack, supabase, syncSignup } from './waitlist-sync';
 /**
  * Signups whose Cloudflare human check didn't pass. They are never turned away: they wait in
  * `waitlist_pending` (supabase/migrations/20261113190000_waitlist_pending.sql) until someone
- * approves them from the Slack link. Nothing is emailed before approval, and the table has its
- * own rate limits, so a bot that skips the check can't bombard the waitlist or anyone's inbox.
+ * approves them from the Slack link. Nothing is emailed before approval, and the database caps
+ * how many can arrive per hour, so a bot that skips the check can't bombard the waitlist or
+ * anyone's inbox.
+ *
+ * Rows are never deleted: approve and discard mark them. That keeps them in the hourly count
+ * and lets each action claim a row with one conditional update, so approve and discard can't
+ * both win.
  */
 const TABLE = 'waitlist_pending';
-const WINDOW_MS = 60 * 60 * 1000;
-/** Unverified signups allowed per IP per hour. Mobile carriers share IPs, so not lower. */
+const COLUMNS = 'id,full_name,email,profession,monthly_income,reason';
+/**
+ * The hourly limits. The database enforces them inside the insert (the trigger in
+ * supabase/migrations/20261113190000_waitlist_pending.sql), so simultaneous requests can't all
+ * slip past a count taken beforehand. These copies only word the Slack alerts: keep them equal.
+ * Per IP: mobile carriers put many people behind one address, so not lower than 5.
+ */
 export const PER_IP_LIMIT = 5;
-/** Unverified signups allowed per hour across everyone. Above this it's an attack. */
 export const GLOBAL_LIMIT = 40;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -37,7 +46,11 @@ type PendingRow = {
 
 export const isPendingId = (id: unknown): id is string => typeof id === 'string' && UUID.test(id);
 
-export type SaveResult = { saved: true; id: string | null } | { saved: false; duplicate: true } | { saved: false; error: string };
+export type SaveResult =
+  | { saved: true; id: string | null }
+  | { saved: false; duplicate: true }
+  | { saved: false; rateLimited: 'ip' | 'global' }
+  | { saved: false; error: string };
 
 export async function savePending(signup: PendingSignup): Promise<SaveResult> {
   const db = supabase();
@@ -60,66 +73,29 @@ export async function savePending(signup: PendingSignup): Promise<SaveResult> {
       const id = Array.isArray(rows) && isPendingId(rows[0]?.id) ? (rows[0].id as string) : null;
       return { saved: true, id };
     }
-    const body: { code?: string } = await response.json().catch(() => ({}));
+    const body: { code?: string; message?: string } = await response.json().catch(() => ({}));
     if (response.status === 409 || body?.code === '23505') return { saved: false, duplicate: true };
+    if (body?.code === 'P0001' && (body.message === 'rate_limited:ip' || body.message === 'rate_limited:global')) {
+      return { saved: false, rateLimited: body.message === 'rate_limited:ip' ? 'ip' : 'global' };
+    }
     return { saved: false, error: `Pending insert failed: HTTP ${response.status}${body?.code ? ` (${body.code})` : ''}` };
   } catch (error) {
     return { saved: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
 
-async function countPending(since: string, ipHash?: string): Promise<number | null> {
-  const db = supabase();
-  if (!db) return null;
-  const filter = ipHash ? `&ip_hash=eq.${encodeURIComponent(ipHash)}` : '';
-  try {
-    const response = await fetch(
-      `${db.url}/rest/v1/${TABLE}?select=id&created_at=gte.${encodeURIComponent(since)}${filter}`,
-      { method: 'HEAD', headers: { ...headers(db.key), Prefer: 'count=exact' }, signal: AbortSignal.timeout(3000) }
-    );
-    const total = Number(response.headers.get('content-range')?.split('/')[1]);
-    return response.ok && Number.isInteger(total) ? total : null;
-  } catch {
-    return null;
-  }
-}
-
 /** One Slack alert per limit per 30 minutes per server instance, so an attack can't flood Slack. */
 const lastLimitAlert = new Map<string, number>();
-function shouldAlert(scope: string, now: number): boolean {
-  const last = lastLimitAlert.get(scope) ?? 0;
-  if (now - last < 30 * 60 * 1000) return false;
+
+/** Tell the team a limit was hit. Runs after the 429 has gone out. */
+export async function alertRateLimit(scope: 'ip' | 'global', now = Date.now()): Promise<void> {
+  if (now - (lastLimitAlert.get(scope) ?? -Infinity) < 30 * 60 * 1000) return;
   lastLimitAlert.set(scope, now);
-  return true;
-}
-
-export type LimitResult = { allowed: true } | { allowed: false; scope: 'ip' | 'global' };
-
-/**
- * Whether another unverified signup may be saved. If Supabase can't count, the signup is let
- * through (losing a real person is worse than one extra row) and the failure is logged.
- */
-export async function checkPendingLimits(ipHash: string | null, now = Date.now()): Promise<LimitResult> {
-  const since = new Date(now - WINDOW_MS).toISOString();
-  const [global, perIp] = await Promise.all([
-    countPending(since),
-    ipHash ? countPending(since, ipHash) : Promise.resolve(0),
-  ]);
-  if (global === null || perIp === null) {
-    logEvent('error', 'waitlist.limit_check_failed', { global: global === null, perIp: perIp === null });
-  }
-  const scope = perIp !== null && perIp >= PER_IP_LIMIT ? 'ip' : global !== null && global >= GLOBAL_LIMIT ? 'global' : null;
-  if (!scope) return { allowed: true };
-
-  logEvent('warn', 'waitlist.rate_limited', { scope, count: scope === 'ip' ? perIp : global });
-  if (shouldAlert(scope, now)) {
-    await postToSlack(
-      scope === 'global'
-        ? `🛑 *Unverified signups paused*\n• More than ${GLOBAL_LIMIT} in the last hour, which looks like a bot attack.\n• Verified signups are not affected. New unverified ones are told to try again later until the hour passes.\nSearch the Vercel logs for \`waitlist.rate_limited\`.`
-        : `🛑 *One connection hit the signup limit*\n• More than ${PER_IP_LIMIT} unverified signups from the same IP address in an hour.\n• Verified signups are not affected.\nSearch the Vercel logs for \`waitlist.rate_limited\`.`
-    );
-  }
-  return { allowed: false, scope };
+  await postToSlack(
+    scope === 'global'
+      ? `🛑 *Unverified signups paused*\n• More than ${GLOBAL_LIMIT} in the last hour, which looks like a bot attack.\n• Verified signups are not affected. New unverified ones are told to try again later until the hour passes.\nSearch the Vercel logs for \`waitlist.rate_limited\`.`
+      : `🛑 *One connection hit the signup limit*\n• More than ${PER_IP_LIMIT} unverified signups from the same IP address in an hour.\n• Verified signups are not affected.\nSearch the Vercel logs for \`waitlist.rate_limited\`.`
+  );
 }
 
 /** A signed link that approves one pending signup, valid for APPROVAL_LINK_DAYS days. */
@@ -131,14 +107,14 @@ export function approveUrl(id: string, now = Date.now()): string | null {
   return `${SITE_URL}/api/waitlist/approve?${query}`;
 }
 
+/** A signup that is still waiting for a decision, or null if it was handled (or never existed). */
 export async function getPending(id: string): Promise<PendingRow | null | 'error'> {
   const db = supabase();
   if (!db || !isPendingId(id)) return 'error';
   try {
-    const response = await fetch(
-      `${db.url}/rest/v1/${TABLE}?id=eq.${id}&select=id,full_name,email,profession,monthly_income,reason`,
-      { headers: headers(db.key) }
-    );
+    const response = await fetch(`${db.url}/rest/v1/${TABLE}?id=eq.${id}&status=eq.pending&select=${COLUMNS}`, {
+      headers: headers(db.key),
+    });
     if (!response.ok) return 'error';
     const rows: unknown = await response.json();
     return Array.isArray(rows) && rows.length > 0 ? (rows[0] as PendingRow) : null;
@@ -147,13 +123,36 @@ export async function getPending(id: string): Promise<PendingRow | null | 'error
   }
 }
 
-async function deletePending(id: string): Promise<boolean> {
+/**
+ * Move a still-pending row to `status`, atomically: the update only matches while the row is
+ * 'pending', so of two simultaneous actions exactly one gets the row back.
+ */
+async function claim(id: string, status: 'approved' | 'discarded'): Promise<PendingRow | null | 'error'> {
+  const db = supabase();
+  if (!db || !isPendingId(id)) return 'error';
+  try {
+    const response = await fetch(`${db.url}/rest/v1/${TABLE}?id=eq.${id}&status=eq.pending&select=${COLUMNS}`, {
+      method: 'PATCH',
+      headers: { ...headers(db.key, true), Prefer: 'return=representation' },
+      body: JSON.stringify({ status, handled_at: new Date().toISOString() }),
+    });
+    if (!response.ok) return 'error';
+    const rows: unknown = await response.json();
+    return Array.isArray(rows) && rows.length > 0 ? (rows[0] as PendingRow) : null;
+  } catch {
+    return 'error';
+  }
+}
+
+/** Undo a claim whose follow-up failed, so the signup goes back in the queue. */
+async function release(id: string): Promise<boolean> {
   const db = supabase();
   if (!db) return false;
   try {
     const response = await fetch(`${db.url}/rest/v1/${TABLE}?id=eq.${id}`, {
-      method: 'DELETE',
-      headers: headers(db.key),
+      method: 'PATCH',
+      headers: { ...headers(db.key, true), Prefer: 'return=minimal' },
+      body: JSON.stringify({ status: 'pending', handled_at: null }),
     });
     return response.ok;
   } catch {
@@ -168,15 +167,27 @@ export type ApproveResult =
 
 /**
  * Move a pending signup onto the real waitlist and send the welcome email, exactly as if their
- * check had passed. The OneSignal step parks its own failures for the nightly retry.
+ * check had passed. The row is claimed first, so a discard at the same moment can't be
+ * overridden; if the waitlist insert then fails, the claim is undone. The OneSignal step parks
+ * its own failures for the nightly retry.
  */
 export async function approvePending(id: string): Promise<ApproveResult> {
-  const row = await getPending(id);
-  if (row === 'error') return { status: 'error', error: 'Could not read the pending signup' };
+  const row = await claim(id, 'approved');
+  if (row === 'error') return { status: 'error', error: 'Could not claim the pending signup' };
   if (!row) return { status: 'missing' };
-  const db = supabase();
-  if (!db) return { status: 'error', error: 'Supabase configuration missing' };
 
+  const giveBack = async (error: string): Promise<ApproveResult> => {
+    if (!(await release(id))) {
+      logEvent('error', 'waitlist.pending_release_failed', { id });
+      await postToSlack(
+        `🚨 *An approval failed and the signup could not be put back in the queue*\n• Name: ${row.full_name}\n• Email: ${row.email}\n• Error: ${error}\nAdd them to the waitlist by hand.`
+      );
+    }
+    return { status: 'error', error };
+  };
+
+  const db = supabase();
+  if (!db) return giveBack('Supabase configuration missing');
   let status: 'approved' | 'already-on-list';
   try {
     const response = await fetch(`${db.url}/rest/v1/waitlist`, {
@@ -192,9 +203,9 @@ export async function approvePending(id: string): Promise<ApproveResult> {
     const body: { code?: string } = response.ok ? {} : await response.json().catch(() => ({}));
     if (response.ok) status = 'approved';
     else if (response.status === 409 || body?.code === '23505') status = 'already-on-list';
-    else return { status: 'error', error: `Waitlist insert failed: HTTP ${response.status}` };
+    else return giveBack(`Waitlist insert failed: HTTP ${response.status}`);
   } catch (error) {
-    return { status: 'error', error: error instanceof Error ? error.message : String(error) };
+    return giveBack(error instanceof Error ? error.message : String(error));
   }
 
   if (status === 'approved') {
@@ -207,13 +218,11 @@ export async function approvePending(id: string): Promise<ApproveResult> {
       monthlyIncome: row.monthly_income,
     });
   }
-  if (!(await deletePending(id))) logEvent('error', 'waitlist.pending_delete_failed', { id });
   return { status, row };
 }
 
 export async function discardPending(id: string): Promise<'discarded' | 'missing' | 'error'> {
-  const row = await getPending(id);
+  const row = await claim(id, 'discarded');
   if (row === 'error') return 'error';
-  if (!row) return 'missing';
-  return (await deletePending(id)) ? 'discarded' : 'error';
+  return row ? 'discarded' : 'missing';
 }

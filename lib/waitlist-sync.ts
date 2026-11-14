@@ -59,6 +59,8 @@ export async function postToSlack(text: string): Promise<void> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text }),
+      // A stalled Slack must never hold a visitor's response or a function open.
+      signal: AbortSignal.timeout(5000),
     });
   } catch (error) {
     console.error('Failed to send Slack alert:', error);
