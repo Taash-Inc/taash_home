@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { announceSignup, retryFailedSync, type FailedSync } from './waitlist-sync';
+import { announceSignup, postToSlack, retryFailedSync, type FailedSync } from './waitlist-sync';
 
 const SUPABASE = 'https://db.example.supabase.co';
 const ONESIGNAL = 'https://api.onesignal.com';
@@ -117,6 +117,20 @@ describe('announceSignup', () => {
     return posts;
   }
 
+  it('announces an unverified signup with the reason and approval link, and no total', async () => {
+    const posts = slack(() => {
+      throw new Error('An unverified signup is not on the waitlist, so it must not count it');
+    });
+    await announceSignup(ADA, { reason: 'no-token:pending', approveUrl: 'https://www.taash.tax/api/waitlist/approve?id=x' });
+    expect(posts).toHaveLength(1);
+    expect(posts[0]).toContain('to approve');
+    expect(posts[0]).toContain('ada@example.com');
+    expect(posts[0]).toContain('still running when they pressed Join');
+    expect(posts[0]).toContain('<https://www.taash.tax/api/waitlist/approve?id=x|Approve or discard>');
+    expect(posts[0]).toContain('Nothing has been emailed yet');
+    expect(posts[0]).not.toContain('Waitlist total');
+  });
+
   it('posts the name, email, profession and the new total', async () => {
     const posts = slack(() => new Response(null, { status: 200, headers: { 'content-range': '0-37/38' } }));
     await announceSignup(ADA);
@@ -166,5 +180,22 @@ describe('announceSignup', () => {
     );
     await announceSignup(ADA);
     expect(signal).toBeInstanceOf(AbortSignal);
+  });
+});
+
+// PR #60 review: the webhook call had no timeout, so a stalled Slack could hold a signup
+// response (and the function) open until Vercel's limit.
+describe('postToSlack', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it('gives up on a stalled webhook instead of hanging', async () => {
+    vi.stubEnv('SLACK_WEBHOOK_URL', 'https://hooks.slack.invalid/T/B/x');
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('ok'));
+    vi.stubGlobal('fetch', fetchImpl);
+    await postToSlack('hello');
+    expect(fetchImpl.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
   });
 });

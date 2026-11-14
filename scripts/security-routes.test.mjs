@@ -31,9 +31,9 @@ function handler(file, { env = {}, providers = {}, fetchImpl } = {}) {
         if (id.startsWith('@/')) return load(path.join(root, `${id.slice(2)}.ts`));
         throw new Error(`Unexpected dependency: ${id}`);
       },
-      process: { env }, console: { error() {}, warn() {} },
+      process: { env }, console: { error() {}, warn() {}, info() {} },
       fetch: fetchImpl ?? (() => { throw new Error('Unexpected network call'); }),
-      TextDecoder, Uint8Array, AbortSignal, URLSearchParams,
+      TextDecoder, Uint8Array, AbortSignal, URLSearchParams, URL,
     }, { filename });
     return loaded.exports;
   }
@@ -49,19 +49,28 @@ const signup = {
   monthlyIncome: null, turnstileToken: 'dummy-captcha',
 };
 
-function waitlist(status = 201, errorBody) {
+function waitlist(status = 201, errorBody, { captcha = true, pendingResult } = {}) {
   const writes = [];
   const slack = [];
   const announced = [];
+  const pending = [];
+  const limitAlerts = [];
   let captchas = 0;
   const route = handler('app/api/waitlist/route.ts', {
     env: { NEXT_PUBLIC_SUPABASE_URL: 'https://db.example.invalid', SUPABASE_SERVICE_KEY: 'dummy-key' },
     providers: {
-      '@/lib/turnstile': { verifyTurnstile: async () => { captchas++; return true; } },
+      '@/lib/turnstile': { verifyTurnstile: async () => { captchas++; return captcha; } },
+      '@/lib/signing': { clientIp: () => '102.89.1.2', hashIp: () => 'ip-hash', refFor: () => 'ref123' },
+      '@/lib/waitlist-pending': {
+        // Never settles: a 429 must not wait on the Slack alert.
+        alertRateLimit: (scope) => { limitAlerts.push(scope); return new Promise(() => {}); },
+        savePending: async (row) => { pending.push(row); return pendingResult ?? { saved: true, id: 'pending-1' }; },
+        approveUrl: (id) => `https://www.taash.tax/api/waitlist/approve?id=${id}&exp=1&sig=s`,
+      },
       '@/lib/waitlist-sync': {
         syncSignup: async () => { throw new Error('Must run after response'); },
         postToSlack: async (text) => { slack.push(text); },
-        announceSignup: async (signup) => { announced.push(signup); },
+        announceSignup: async (signup, unverified) => { announced.push(unverified ? { signup, unverified } : signup); },
       },
     },
     fetchImpl: async (url, init) => {
@@ -69,7 +78,7 @@ function waitlist(status = 201, errorBody) {
       return new Response(errorBody === undefined ? null : JSON.stringify(errorBody), { status });
     },
   });
-  return { ...route, writes, slack, announced, captchas: () => captchas };
+  return { ...route, writes, slack, announced, pending, limitAlerts, captchas: () => captchas };
 }
 
 test('retry GET and POST deny missing, blank and wrong secrets before reading the queue', async () => {
@@ -270,4 +279,174 @@ test('invalid UTF-8 and scalar bodies cannot pass the JSON object parser', async
   }
   const invalidUtf8 = new Uint8Array([123, 34, 120, 34, 58, 34, 255, 34, 125]);
   await assert.rejects(readJsonObject(streamed(invalidUtf8)), (error) => error.status === 400);
+});
+
+// 13 Nov 2026: a visitor's Cloudflare check never finished, the form waited forever, and their
+// details never reached us. A signup without a passing check is now held for approval.
+test('a signup without a token is held for approval, not turned away', async () => {
+  const route = waitlist();
+  const { turnstileToken: _t, ...noToken } = signup;
+  const response = await route.POST(request({ ...noToken, check: 'pending' }));
+  assert.equal(response.status, 201);
+  assert.deepEqual(await response.json(), { message: 'Successfully joined the waitlist!' });
+  assert.equal(route.captchas(), 0);
+  assert.equal(route.writes.length, 0, 'nothing is written to the real waitlist');
+  assert.deepEqual(JSON.parse(JSON.stringify(route.pending)), [{
+    fullName: 'Ada Obi', email: 'ada@example.invalid', profession: 'Freelancer', monthlyIncome: null,
+    reason: 'no-token:pending', ipHash: 'ip-hash',
+  }]);
+  assert.equal(route.callbacks.length, 1, 'only the Slack approval message; no welcome email');
+  await route.callbacks[0]();
+  assert.equal(route.announced[0].unverified.reason, 'no-token:pending');
+  assert.match(route.announced[0].unverified.approveUrl, /approve\?id=pending-1/);
+});
+
+test('an unknown or injected check value is logged as unknown', async () => {
+  const route = waitlist();
+  await route.POST(request({ ...signup, turnstileToken: null, check: 'pending\n• Email: boss@taash.tax' }));
+  assert.equal(route.pending[0].reason, 'no-token:unknown');
+  assert.equal((await waitlist().POST(request({ ...signup, check: 42 }))).status, 400);
+});
+
+test('a token Cloudflare rejects is held for approval too', async () => {
+  const route = waitlist(201, undefined, { captcha: false });
+  assert.equal((await route.POST(request(signup))).status, 201);
+  assert.equal(route.captchas(), 1);
+  assert.equal(route.writes.length, 0);
+  assert.equal(route.pending[0].reason, 'rejected');
+});
+
+test('a filled-in hidden field is answered like a signup but nothing is saved or sent', async () => {
+  const route = waitlist();
+  const response = await route.POST(request({ ...signup, extra_info: 'http://spam.example' }));
+  assert.equal(response.status, 201);
+  assert.deepEqual(await response.json(), { message: 'Successfully joined the waitlist!' });
+  assert.equal(route.writes.length + route.pending.length + route.callbacks.length + route.captchas(), 0);
+});
+
+// PR #60 review: the limit alert was awaited before the 429, and Slack had no timeout.
+test('over the limit, the visitor is told at once and Slack is alerted afterwards', async () => {
+  const route = waitlist(201, undefined, { pendingResult: { saved: false, rateLimited: 'ip' } });
+  const response = await route.POST(request({ ...signup, turnstileToken: null, check: 'error' }));
+  assert.equal(response.status, 429);
+  assert.match((await response.json()).error, /try again/i);
+  assert.equal(route.limitAlerts.length, 0, 'the alert must not delay the response');
+  assert.equal(route.callbacks.length, 1);
+  void route.callbacks[0]();
+  assert.deepEqual(route.limitAlerts, ['ip']);
+});
+
+test('verified signups never touch the pending table', async () => {
+  const route = waitlist(201, undefined, { pendingResult: { saved: false, rateLimited: 'global' } });
+  assert.equal((await route.POST(request(signup))).status, 201);
+  assert.equal(route.pending.length, 0);
+  assert.equal(route.writes.length, 1);
+});
+
+test('a repeated unverified signup is not announced twice', async () => {
+  const route = waitlist(201, undefined, { pendingResult: { saved: false, duplicate: true } });
+  assert.equal((await route.POST(request({ ...signup, turnstileToken: null }))).status, 201);
+  assert.equal(route.callbacks.length, 0);
+});
+
+test('an unverified signup that cannot be saved alerts Slack with the details', async () => {
+  const route = waitlist(201, undefined, { pendingResult: { saved: false, error: 'Pending insert failed: HTTP 404 (42P01)' } });
+  assert.equal((await route.POST(request({ ...signup, turnstileToken: null, check: 'pending' }))).status, 500);
+  await route.callbacks[0]();
+  assert.match(route.slack[0], /could not be saved\* \(unverified, no-token:pending\)/);
+  assert.match(route.slack[0], /ada@example\.invalid/);
+  assert.match(route.slack[0], /42P01/);
+});
+
+function clientReport() {
+  const slack = [];
+  const route = handler('app/api/client-report/route.ts', {
+    providers: { '@/lib/waitlist-sync': { postToSlack: async (text) => { slack.push(text); } } },
+  });
+  return { ...route, slack };
+}
+const fromSite = { origin: 'https://www.taash.tax', host: 'www.taash.tax' };
+
+test('browser reports are only accepted from our own pages, in the expected shape', async () => {
+  const route = clientReport();
+  const report = { type: 'signup-failed', reason: 'network', placement: 'hero', path: '/' };
+  assert.equal((await route.POST(request(report))).status, 403);
+  assert.equal((await route.POST(request(report, { origin: 'https://evil.example', host: 'www.taash.tax' }))).status, 403);
+  for (const body of [{ ...report, type: 'anything' }, { ...report, reason: '' }, { ...report, placement: 'footer' },
+    { ...report, path: 'https://evil.example' }, { ...report, reason: 42 }]) {
+    assert.equal((await route.POST(request(body, fromSite))).status, 400);
+  }
+  assert.equal((await route.POST(request({ ...report, padding: 'a'.repeat(2048) }, fromSite))).status, 413);
+  assert.equal(route.slack.length, 0);
+});
+
+test('a browser report reaches Slack scrubbed, after the response, and an identical repeat is muted', async () => {
+  const route = clientReport();
+  const report = { type: 'js-error', reason: 'Failed for ada@example.com card 4111111111111111 at /email-preferences?t=secret', source: 'page.js:12', path: '/' };
+  assert.equal((await route.POST(request(report, fromSite))).status, 204);
+  assert.equal((await route.POST(request(report, fromSite))).status, 204);
+  assert.equal(route.slack.length, 0, 'Slack is posted after the response');
+  for (const callback of route.callbacks) await callback();
+  assert.equal(route.slack.length, 1);
+  assert.doesNotMatch(route.slack[0], /ada@example\.com|4111/);
+  assert.match(route.slack[0], /\[email\]/);
+  assert.doesNotMatch(route.slack[0], /t=secret/);
+});
+
+function approve({ check = 'ok', row = { id: '3f1c2b4a-1d2e-4f5a-8b9c-0d1e2f3a4b5c', full_name: 'Ada Obi', email: 'ada@example.invalid', profession: null, reason: 'no-token:pending' } } = {}) {
+  const calls = [];
+  const slack = [];
+  const route = handler('app/api/waitlist/approve/route.ts', {
+    providers: {
+      '@/lib/signing': { checkApproval: (id, exp, sig) => (sig === 'good' ? check : 'invalid') },
+      '@/lib/waitlist-pending': {
+        isPendingId: (id) => typeof id === 'string' && /^[0-9a-f-]{36}$/.test(id),
+        getPending: async (id) => { calls.push(['get', id]); return row; },
+        approvePending: async (id) => { calls.push(['approve', id]); return { status: 'approved', row }; },
+        discardPending: async (id) => { calls.push(['discard', id]); return 'discarded'; },
+      },
+      '@/lib/waitlist-sync': { postToSlack: async (text) => { slack.push(text); } },
+    },
+  });
+  return { ...route, calls, slack };
+}
+const ID = '3f1c2b4a-1d2e-4f5a-8b9c-0d1e2f3a4b5c';
+const approveGet = (sig) => new nextServer.NextRequest(`https://www.taash.tax/api/waitlist/approve?id=${ID}&exp=99&sig=${sig}`);
+const approvePost = (fields) => new nextServer.NextRequest(`https://www.taash.tax/api/waitlist/approve?id=${ID}&exp=99&sig=good`, {
+  method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' },
+  body: new URLSearchParams(fields).toString(),
+});
+
+test('opening an approval link only shows the signup; it never approves it', async () => {
+  const route = approve();
+  const page = await route.GET(approveGet('good'));
+  assert.equal(page.status, 200);
+  const html = await page.text();
+  assert.match(html, /Approve and send welcome email/);
+  assert.match(html, /noindex/);
+  assert.deepEqual(route.calls.map(([kind]) => kind), ['get']);
+});
+
+test('a forged or expired approval link is refused before any lookup', async () => {
+  const forged = approve();
+  assert.equal((await forged.GET(approveGet('bad'))).status, 403);
+  assert.equal((await forged.POST(approvePost({ id: ID, exp: '99', sig: 'bad', action: 'approve' }))).status, 403);
+  const expired = approve({ check: 'expired' });
+  assert.equal((await expired.POST(approvePost({ id: ID, exp: '99', sig: 'good', action: 'approve' }))).status, 403);
+  assert.equal(forged.calls.length + expired.calls.length, 0);
+});
+
+test('pressing Approve moves the signup to the waitlist and says so in Slack', async () => {
+  const route = approve();
+  const response = await route.POST(approvePost({ id: ID, exp: '99', sig: 'good', action: 'approve' }));
+  assert.equal(response.status, 200);
+  assert.deepEqual(route.calls, [['approve', ID]]);
+  assert.match(route.slack[0], /Approved/);
+});
+
+test('names on the approval page are escaped', async () => {
+  const route = approve({ row: { id: ID, full_name: '<script>alert(1)</script>', email: 'a@b.invalid', profession: null, reason: 'rejected' } });
+  const html = await (await route.GET(approveGet('good'))).text();
+  assert.doesNotMatch(html, /<script>alert/);
+  assert.match(html, /&lt;script&gt;/);
 });

@@ -34,13 +34,13 @@ export async function syncToOneSignal(contact: WaitlistContact): Promise<SyncRes
   );
 }
 
-function supabase(): { url: string; key: string } | null {
+export function supabase(): { url: string; key: string } | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY;
   return url && key ? { url, key } : null;
 }
 
-function headers(key: string, json = false): Record<string, string> {
+export function headers(key: string, json = false): Record<string, string> {
   return {
     apikey: key,
     Authorization: `Bearer ${key}`,
@@ -59,6 +59,8 @@ export async function postToSlack(text: string): Promise<void> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text }),
+      // A stalled Slack must never hold a visitor's response or a function open.
+      signal: AbortSignal.timeout(5000),
     });
   } catch (error) {
     console.error('Failed to send Slack alert:', error);
@@ -95,12 +97,44 @@ function oneLine(value: string): string {
 /**
  * Tell the team someone joined. It runs after the response has gone out, and the count is a
  * nice-to-have: if Supabase can't give it, the message goes out without it.
+ *
+ * An unverified signup (the Cloudflare check didn't pass) is announced differently: it is not
+ * on the waitlist yet, no email has gone out, and the message carries the approval link.
  */
-export async function announceSignup(signup: { fullName: string; email: string; profession: string | null }): Promise<void> {
+export async function announceSignup(
+  signup: { fullName: string; email: string; profession: string | null },
+  unverified?: { reason: string; approveUrl: string | null }
+): Promise<void> {
+  const details = `• Name: ${oneLine(signup.fullName)}\n• Email: ${oneLine(signup.email)}\n• Profession: ${signup.profession ? oneLine(signup.profession) : 'not given'}`;
+  if (unverified) {
+    await postToSlack(
+      `🟡 *Waitlist signup to approve*\n${details}\n• Why: ${describeReason(unverified.reason)}\n${
+        unverified.approveUrl
+          ? `• <${unverified.approveUrl}|Approve or discard>`
+          : '• No approval link could be made: approve it in Supabase (table `waitlist_pending`).'
+      }\nThey saw the normal "You're on the list" screen. Nothing has been emailed yet.`
+    );
+    return;
+  }
   const total = await countWaitlist();
   await postToSlack(
-    `🎉 *New waitlist signup*\n• Name: ${oneLine(signup.fullName)}\n• Email: ${oneLine(signup.email)}\n• Profession: ${signup.profession ? oneLine(signup.profession) : 'not given'}${total === null ? '' : `\n• Waitlist total: ${total}`}`
+    `🎉 *New waitlist signup*\n${details}${total === null ? '' : `\n• Waitlist total: ${total}`}`
   );
+}
+
+/** Plain-English reason for a pending signup. Reasons are fixed codes, never visitor input. */
+export function describeReason(reason: string): string {
+  const [kind, detail] = reason.split(':');
+  if (kind === 'rejected') return 'Cloudflare rejected the human check';
+  const why: Record<string, string> = {
+    pending: 'the human check was still running when they pressed Join',
+    'not-loaded': 'the human check never loaded on their phone',
+    error: 'the human check failed to run',
+    unsupported: 'their browser cannot run the human check',
+    interactive: 'Cloudflare wanted them to tick a box',
+    expired: 'the human check expired before they pressed Join',
+  };
+  return `No Cloudflare check: ${why[detail] ?? 'unknown'}`;
 }
 
 async function storeFailedSync(contact: WaitlistContact, errorMessage: string): Promise<void> {
