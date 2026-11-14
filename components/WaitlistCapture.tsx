@@ -1,8 +1,15 @@
 'use client';
 
+import { sendClientReport } from '@/lib/client-report';
 import { PROFESSIONS } from '@/lib/professions';
 import { clearJoined, markJoined, useWaitlistJoined } from '@/lib/waitlist-store';
-import { initialVerifyState, verifyStep, type VerifyEvent } from '@/lib/waitlist-verify';
+import {
+  GRACE_MS,
+  initialVerifyState,
+  verifyStep,
+  type ClientCheck,
+  type VerifyEvent,
+} from '@/lib/waitlist-verify';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { track } from '@vercel/analytics';
 import Link from 'next/link';
@@ -14,17 +21,8 @@ const SHARE_URL =
   'https://www.taash.tax/?utm_source=whatsapp&utm_medium=referral&utm_campaign=waitlist_share';
 const SHARE_TEXT = `I just joined the Taash waitlist. It keeps your income, expenses and tax in one place, built for Nigeria's new tax rules. Get early access: ${SHARE_URL}`;
 
-/** With no token after this long, tell the visitor something is still happening. */
-const SLOW_VERIFY_MS = 10_000;
-
-type Hint = '' | 'slow' | 'tap' | 'failed';
-
-const HINTS: Record<Exclude<Hint, ''>, string> = {
-  slow: 'Still checking your connection…',
-  tap: 'One last step: tick the box below to confirm you’re human.',
-  failed:
-    'We couldn’t verify this browser. Try again, or tap ⋯ and choose “Open in browser”, then join from there.',
-};
+/** Network failures are retried this many times, after these delays, before giving up. */
+const RETRY_DELAYS_MS = [1500, 3000];
 
 /**
  * The waitlist signup, used in the hero and in the section near the end of the page.
@@ -32,9 +30,13 @@ const HINTS: Record<Exclude<Hint, ''>, string> = {
  * Ad visitors arrive on phones inside Instagram's in-app browser. The old form asked for five
  * inputs plus a visible "Verify you are human" checkbox, 11 screens below the fold. This one
  * asks for a first name and an email (profession is an optional one-tap choice in the section
- * variant), and the Turnstile check runs invisibly while the visitor types: the widget mounts
- * on the first focus, stays hidden unless Cloudflare needs a tap, and a submit that arrives
- * before the token waits for it and then sends itself.
+ * variant), and the Turnstile check runs invisibly in the background.
+ *
+ * The check is never a gate (lib/waitlist-verify.ts). It starts once the visitor has touched
+ * or scrolled the page with the form nearby, so it has usually finished by the time they press
+ * Join. If it hasn't, the submit waits at most GRACE_MS and then sends anyway, with the reason;
+ * the server holds those signups for approval. Requests that can't reach the server are
+ * retried, then reported (lib/client-report.ts) so a failure is never invisible.
  *
  * Inputs are uncontrolled and read with FormData at send time, so a Turnstile callback that
  * fires after a re-render can never send stale values.
@@ -42,21 +44,50 @@ const HINTS: Record<Exclude<Hint, ''>, string> = {
 export default function WaitlistCapture({ placement }: { placement: Placement }) {
   const joined = useWaitlistJoined();
   const [joinedHere, setJoinedHere] = useState(false);
-  const [busy, setBusy] = useState<'' | 'verifying' | 'sending'>('');
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [hint, setHint] = useState<Hint>('');
   const [turnstileWanted, setTurnstileWanted] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const turnstileRef = useRef<TurnstileInstance>(null);
-  // Turnstile events can arrive before the visitor submits; lib/waitlist-verify.ts remembers
-  // them (an early "unsupported" used to be dropped, leaving the submit waiting forever).
+  // Turnstile events can arrive before the visitor submits; lib/waitlist-verify.ts remembers them.
   const verifyRef = useRef(initialVerifyState);
   const startedRef = useRef(false);
-  const slowTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const graceTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const formId = useId();
   const compact = placement !== 'section';
 
-  useEffect(() => () => clearTimeout(slowTimerRef.current), []);
+  useEffect(() => () => clearTimeout(graceTimerRef.current), []);
+
+  // Start the check early: once the visitor has interacted with the page (a tap, scroll or key)
+  // while this form is on or near the screen. Not at page load, because loading Turnstile for
+  // every visitor blocked the main thread for over a second on mid-range Android.
+  useEffect(() => {
+    const form = formRef.current;
+    if (!form || turnstileWanted) return;
+    let near = false;
+    let interacted = false;
+    const maybeStart = () => {
+      if (near && interacted) setTurnstileWanted(true);
+    };
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        near = entry.isIntersecting;
+        maybeStart();
+      },
+      { rootMargin: '300px 0px' }
+    );
+    observer.observe(form);
+    const onInteract = () => {
+      interacted = true;
+      maybeStart();
+    };
+    const events = ['pointerdown', 'touchstart', 'scroll', 'keydown'] as const;
+    for (const type of events) window.addEventListener(type, onInteract, { once: true, passive: true });
+    return () => {
+      observer.disconnect();
+      for (const type of events) window.removeEventListener(type, onInteract);
+    };
+  }, [turnstileWanted]);
 
   const start = () => {
     setTurnstileWanted(true);
@@ -65,44 +96,47 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
     track('Waitlist Start', { placement });
   };
 
-  const send = async (token: string) => {
-    clearTimeout(slowTimerRef.current);
-    setHint('');
-    setBusy('sending');
+  /** Send the signup, with a token if Cloudflare gave one, or with the reason it didn't. */
+  const send = async (token: string | null, check: ClientCheck | null) => {
+    clearTimeout(graceTimerRef.current);
+    setBusy(true);
 
     const data = new FormData(formRef.current ?? undefined);
     const firstName = String(data.get('firstName') ?? '').trim();
     const profession = String(data.get('profession') ?? '') || null;
+    const payload = JSON.stringify({
+      fullName: firstName,
+      email: String(data.get('email') ?? '').trim(),
+      profession,
+      turnstileToken: token,
+      check,
+      extra_info: String(data.get('extra_info') ?? ''),
+    });
 
     try {
-      const response = await fetch('/api/waitlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullName: firstName,
-          email: String(data.get('email') ?? '').trim(),
-          profession,
-          turnstileToken: token,
-        }),
-      });
+      const response = await postSignup(payload);
       const body: { error?: string } = await response.json().catch(() => ({}));
-      if (!response.ok) throw new SignupError(friendlyError(response.status, body.error));
+      if (!response.ok) {
+        throw new SignupError(friendlyError(response.status, body.error), `http-${response.status}`);
+      }
 
-      track('Waitlist Joined', { placement, profession: profession ?? 'none' });
+      track('Waitlist Joined', { placement, profession: profession ?? 'none', check: check ?? 'passed' });
       setJoinedHere(true);
       markJoined(firstName);
     } catch (err) {
-      const message =
-        err instanceof SignupError
-          ? err.message
-          : 'We couldn’t reach Taash. Check your connection and try again.';
-      setError(message);
-      track('Waitlist Error', { placement, reason: message.slice(0, 80) });
+      const signupError = err instanceof SignupError ? err : null;
+      const code = signupError?.code ?? 'network';
+      setError(signupError?.message ?? 'We couldn’t reach Taash. Check your connection and try again.');
+      track('Waitlist Error', { placement, reason: code });
+      // The server already alerts on its own failures (5xx); this covers the ones it never saw.
+      if (code === 'network' || code.startsWith('http-5')) {
+        sendClientReport({ type: 'signup-failed', reason: code, placement });
+      }
     } finally {
-      setBusy('');
+      setBusy(false);
       // Tokens are single-use; start on the next one straight away.
       verifyRef.current = verifyStep(verifyRef.current, { type: 'sent' }).state;
-      turnstileRef.current?.reset();
+      if (token) turnstileRef.current?.reset();
     }
   };
 
@@ -111,25 +145,15 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
     verifyRef.current = state;
     switch (action.type) {
       case 'send':
-        void send(action.token);
+        void send(action.token, null);
+        break;
+      case 'send-unverified':
+        void send(null, action.check);
         break;
       case 'wait':
-        setBusy('verifying');
-        setHint('');
-        if (action.retry) turnstileRef.current?.reset();
-        clearTimeout(slowTimerRef.current);
-        slowTimerRef.current = setTimeout(() => {
-          if (verifyRef.current.pending) setHint((h) => h || 'slow');
-        }, SLOW_VERIFY_MS);
-        break;
-      case 'failed':
-        clearTimeout(slowTimerRef.current);
-        setBusy('');
-        setHint('failed');
-        track('Waitlist Error', {
-          placement,
-          reason: verifyRef.current.unsupported ? 'turnstile-unsupported' : 'turnstile',
-        });
+        setBusy(true);
+        clearTimeout(graceTimerRef.current);
+        graceTimerRef.current = setTimeout(() => dispatch({ type: 'timeout' }), GRACE_MS);
         break;
     }
   };
@@ -163,7 +187,7 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
       onSubmit={onSubmit}
       onFocusCapture={start}
       aria-describedby={`${formId}-terms`}
-      className='w-full'>
+      className='relative w-full'>
       <div className={compact ? 'grid gap-2.5 sm:grid-cols-2' : 'grid gap-4'}>
         <Field
           id={`${formId}-name`}
@@ -220,23 +244,29 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
           </p>
         ) : null}
       </div>
-      <p aria-live='polite' className={hint ? 'mt-3 text-sm text-ink-700' : 'sr-only'}>
-        {hint ? HINTS[hint] : ''}
-      </p>
 
-      {/* Hidden unless Cloudflare needs a tap. Mounted on first focus: loading it for every
-          visitor blocked the main thread for over a second on mid-range Android. */}
+      {/* Left empty by people: it's off-screen, skipped by Tab and hidden from screen readers.
+          Bots fill in every field, and the server quietly drops signups that have it. */}
+      <div aria-hidden='true' className='absolute top-auto -left-[9999px] size-px overflow-hidden'>
+        <label>
+          Leave this empty
+          <input type='text' name='extra_info' tabIndex={-1} autoComplete='off' defaultValue='' />
+        </label>
+      </div>
+
+      {/* Hidden unless Cloudflare wants a tap, and even then the visitor doesn't have to: a
+          submit without a token is held for approval instead of being turned away. */}
       {turnstileWanted ? (
         <div className='mt-3 flex justify-center empty:hidden'>
           <Turnstile
             ref={turnstileRef}
             siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'}
+            onWidgetLoad={() => dispatch({ type: 'started' })}
             onSuccess={(token) => dispatch({ type: 'token', token })}
             onError={() => dispatch({ type: 'error' })}
             onUnsupported={() => dispatch({ type: 'unsupported' })}
             onExpire={() => dispatch({ type: 'expire' })}
-            onBeforeInteractive={() => setHint('tap')}
-            onAfterInteractive={() => setHint('')}
+            onBeforeInteractive={() => dispatch({ type: 'interactive' })}
             options={{ theme: 'light', appearance: 'interaction-only', size: 'flexible' }}
           />
         </div>
@@ -244,11 +274,11 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
 
       <button
         type='submit'
-        aria-disabled={busy !== ''}
+        aria-disabled={busy}
         className='group mt-3 grid h-13 w-full grid-cols-[2.25rem_1fr_2.25rem] items-center gap-2 rounded-full bg-ink-1000 px-2 font-semibold text-white shadow-[0_10px_30px_-12px_rgb(15_23_42/0.55)] transition-[transform,background-color] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-ink-900 active:scale-[0.98] aria-disabled:cursor-wait aria-disabled:opacity-85'>
         <span aria-hidden='true' />
         <span>
-          {busy === 'verifying' ? 'Securing your spot…' : busy === 'sending' ? 'Joining…' : 'Join the waitlist'}
+          {busy ? 'Joining…' : 'Join the waitlist'}
         </span>
         <span className='grid size-9 place-items-center rounded-full bg-white/12 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:translate-x-0.5'>
           {busy ? <Spinner /> : <ArrowIcon />}
@@ -275,10 +305,33 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
   );
 }
 
-class SignupError extends Error {}
+class SignupError extends Error {
+  constructor(
+    message: string,
+    readonly code: string
+  ) {
+    super(message);
+  }
+}
+
+/** POST the signup, retrying only when the request never reached the server. */
+async function postSignup(payload: string): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+      });
+    } catch (error) {
+      if (attempt >= RETRY_DELAYS_MS.length) throw error;
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS_MS[attempt]));
+    }
+  }
+}
 
 function friendlyError(status: number, message?: string): string {
-  if (message?.includes('CAPTCHA')) return 'We couldn’t confirm you’re human. Please try again.';
+  if (status === 429) return message || 'Too many signups right now. Please try again in a few minutes.';
   if (message === 'Invalid email format')
     return 'That email address doesn’t look right. Please check it and try again.';
   if (status >= 500) return 'Something went wrong on our side. Please try again in a moment.';

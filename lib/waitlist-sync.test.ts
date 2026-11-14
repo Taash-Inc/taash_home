@@ -117,6 +117,20 @@ describe('announceSignup', () => {
     return posts;
   }
 
+  it('announces an unverified signup with the reason and approval link, and no total', async () => {
+    const posts = slack(() => {
+      throw new Error('An unverified signup is not on the waitlist, so it must not count it');
+    });
+    await announceSignup(ADA, { reason: 'no-token:pending', approveUrl: 'https://www.taash.tax/api/waitlist/approve?id=x' });
+    expect(posts).toHaveLength(1);
+    expect(posts[0]).toContain('to approve');
+    expect(posts[0]).toContain('ada@example.com');
+    expect(posts[0]).toContain('still running when they pressed Join');
+    expect(posts[0]).toContain('<https://www.taash.tax/api/waitlist/approve?id=x|Approve or discard>');
+    expect(posts[0]).toContain('Nothing has been emailed yet');
+    expect(posts[0]).not.toContain('Waitlist total');
+  });
+
   it('posts the name, email, profession and the new total', async () => {
     const posts = slack(() => new Response(null, { status: 200, headers: { 'content-range': '0-37/38' } }));
     await announceSignup(ADA);

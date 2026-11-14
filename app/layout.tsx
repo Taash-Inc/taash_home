@@ -3,6 +3,7 @@ import {
   SoftwareApplicationSchema,
   WebsiteSchema,
 } from '@/components/StructuredData';
+import ErrorReporter from '@/components/ErrorReporter';
 import SiteAnalytics from '@/components/SiteAnalytics';
 import { SITE_URL } from '@/lib/site';
 import type { Metadata, Viewport } from 'next';
@@ -135,6 +136,7 @@ export default function RootLayout({
       <body className='font-sans antialiased'>
         {children}
         <SiteAnalytics />
+        <ErrorReporter />
       </body>
     </html>
   );

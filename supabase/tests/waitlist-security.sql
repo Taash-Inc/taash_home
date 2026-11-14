@@ -36,13 +36,16 @@ reset role;
 \ir ../migrations/20261103190000_lock_down_waitlist.sql
 -- Reapplying is safe.
 \ir ../migrations/20261103190000_lock_down_waitlist.sql
+\ir ../migrations/20261113190000_waitlist_pending.sql
+\ir ../migrations/20261113190000_waitlist_pending.sql
 
 do $$
 declare principal text; tab text; statement text;
 begin
   foreach principal in array array['anon','authenticated'] loop
     foreach tab in array array['waitlist','waitlist_backup','failed_loops_syncs',
-                              'failed_onesignal_syncs','email_preference_tokens'] loop
+                              'failed_onesignal_syncs','email_preference_tokens',
+                              'waitlist_pending'] loop
       foreach statement in array array[
         format('select * from public.%I', tab),
         format('insert into public.%I (email) values (''attacker@example.invalid'')', tab),
@@ -69,6 +72,8 @@ $$;
 set role service_role;
 insert into public.waitlist (email, full_name) values ('server@example.invalid','Test Person');
 insert into public.email_preference_tokens values ('server@example.invalid','dummy-token');
+insert into public.waitlist_pending (full_name, email, reason) values ('Held Person','held@example.invalid','no-token:pending');
+delete from public.waitlist_pending where email='held@example.invalid';
 update public.email_preference_tokens set token='updated' where email='server@example.invalid';
 delete from public.failed_loops_syncs where email='server@example.invalid';
 reset role;
