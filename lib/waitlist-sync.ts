@@ -1,4 +1,5 @@
 import { ensurePreferenceToken, leaveWaitlist, preferencesConfig } from './email-preferences';
+import { logEvent } from './log';
 import { syncWaitlistContact, type SyncResult, type WaitlistContact } from './onesignal';
 
 /**
@@ -48,22 +49,38 @@ export function headers(key: string, json = false): Record<string, string> {
   };
 }
 
+/**
+ * Post an alert to the team's Slack channel (the one SLACK_WEBHOOK_URL was created for).
+ *
+ * Slack answers every post, and a rejection (archived channel, revoked webhook) would otherwise
+ * drop every alert unnoticed, so failures are logged as `slack.post_failed` with Slack's own
+ * error code. The log never includes the message, which can contain names and emails, or the
+ * webhook URL, which is a secret.
+ */
 export async function postToSlack(text: string): Promise<void> {
   const webhookUrl = process.env.SLACK_WEBHOOK_URL;
   if (!webhookUrl) {
-    console.warn('Slack webhook not configured, skipping alert');
+    logEvent('error', 'slack.not_configured');
     return;
   }
   try {
-    await fetch(webhookUrl, {
+    const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text }),
       // A stalled Slack must never hold a visitor's response or a function open.
       signal: AbortSignal.timeout(5000),
     });
+    if (!response.ok) {
+      // Slack's body is a short code such as "channel_is_archived"; keep only a safe slice.
+      const code = (await response.text().catch(() => '')).replace(/[^\w.-]/g, '').slice(0, 60);
+      logEvent('error', 'slack.post_failed', { status: response.status, slack_error: code || 'unknown' });
+    }
   } catch (error) {
-    console.error('Failed to send Slack alert:', error);
+    logEvent('error', 'slack.post_failed', {
+      status: null,
+      slack_error: error instanceof Error ? error.name : 'unknown',
+    });
   }
 }
 

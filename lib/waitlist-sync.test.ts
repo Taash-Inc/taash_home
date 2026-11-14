@@ -198,4 +198,50 @@ describe('postToSlack', () => {
     await postToSlack('hello');
     expect(fetchImpl.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
   });
+
+  // 13 Nov 2026: the response from Slack was never read, so a rejected post (archived channel,
+  // revoked webhook) would have dropped every alert with nothing in the logs.
+  const HOOK = 'https://hooks.slack.invalid/T/B/secret-part';
+  const logged = (spy: { mock: { calls: unknown[][] } }) => spy.mock.calls.map((c) => String(c[0])).join('\n');
+
+  it.each([
+    [404, 'channel_not_found'],
+    [410, 'channel_is_archived'],
+    [403, 'invalid_token'],
+  ])('logs a post Slack rejects (HTTP %i, %s), without the message or the webhook', async (status, code) => {
+    vi.stubEnv('SLACK_WEBHOOK_URL', HOOK);
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>(async () => new Response(code, { status })));
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await postToSlack('🎉 Name: Ada Obi • Email: ada@example.com');
+    const line = JSON.parse(logged(error));
+    expect(line).toEqual({ event: 'slack.post_failed', status, slack_error: code });
+    expect(logged(error)).not.toMatch(/ada|secret-part/i);
+    error.mockRestore();
+  });
+
+  it('logs a post that never reached Slack', async () => {
+    vi.stubEnv('SLACK_WEBHOOK_URL', HOOK);
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>(async () => { throw new DOMException('timed out', 'TimeoutError'); }));
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await postToSlack('hello');
+    expect(JSON.parse(logged(error))).toEqual({ event: 'slack.post_failed', status: null, slack_error: 'TimeoutError' });
+    error.mockRestore();
+  });
+
+  it('logs a missing webhook as an error, not a quiet warning', async () => {
+    vi.stubEnv('SLACK_WEBHOOK_URL', '');
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await postToSlack('hello');
+    expect(JSON.parse(logged(error))).toEqual({ event: 'slack.not_configured' });
+    error.mockRestore();
+  });
+
+  it('logs nothing when Slack accepts the post', async () => {
+    vi.stubEnv('SLACK_WEBHOOK_URL', HOOK);
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>(async () => new Response('ok')));
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await postToSlack('hello');
+    expect(error).not.toHaveBeenCalled();
+    error.mockRestore();
+  });
 });
