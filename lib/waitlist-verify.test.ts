@@ -85,3 +85,59 @@ describe('waitlist Turnstile state: the check is never a gate', () => {
     expect(isClientCheck(undefined)).toBe(false);
   });
 });
+
+// PR #62: after a held signup the check keeps running, and a late token confirms it. The handle
+// lives in this state so every token goes through one decision.
+describe('waitlist Turnstile state: confirming a held signup late', () => {
+  const HANDLE = 'id.123.sig';
+  const heldSend = () => run([{ type: 'started' }, { type: 'submit' }, { type: 'timeout' }]);
+
+  it('confirms with a token that arrives after the server returned the handle', () => {
+    const held = verifyStep(heldSend().state, { type: 'held', handle: HANDLE });
+    expect(held.action).toEqual({ type: 'watch-late' });
+    expect(verifyStep(held.state, { type: 'token', token: 'late' }).action).toEqual({
+      type: 'confirm-late',
+      handle: HANDLE,
+      token: 'late',
+    });
+  });
+
+  // Review finding: the token arrived while the held signup's request was still in flight, was
+  // stored, and was then wiped when the reply came back. Cloudflare doesn't send it twice.
+  it('confirms with a token that arrived while the held signup was still being sent', () => {
+    const inFlight = verifyStep(heldSend().state, { type: 'token', token: 'early' });
+    expect(inFlight.action).toEqual({ type: 'none' });
+    expect(verifyStep(inFlight.state, { type: 'held', handle: HANDLE }).action).toEqual({
+      type: 'confirm-late',
+      handle: HANDLE,
+      token: 'early',
+    });
+  });
+
+  it('uses each late token once', () => {
+    const held = verifyStep(heldSend().state, { type: 'held', handle: HANDLE }).state;
+    const confirmed = verifyStep(held, { type: 'token', token: 'late' }).state;
+    expect(confirmed.held).toBeNull();
+    expect(confirmed.token).toBeNull();
+  });
+
+  // Review finding: "Not you? Use another email" left the old handle in place, so the next token
+  // confirmed the old signup and the new one went out unverified.
+  it('stops confirming the old signup once the visitor starts over', () => {
+    const held = verifyStep(heldSend().state, { type: 'held', handle: HANDLE }).state;
+    const reset = verifyStep(held, { type: 'reset' }).state;
+    expect(verifyStep(reset, { type: 'token', token: 'fresh' }).action).toEqual({ type: 'none' });
+    expect(verifyStep(verifyStep(reset, { type: 'token', token: 'fresh' }).state, { type: 'submit' }).action).toEqual({
+      type: 'send',
+      token: 'fresh',
+    });
+  });
+
+  it('stops confirming once the late window closes', () => {
+    const held = verifyStep(heldSend().state, { type: 'held', handle: HANDLE }).state;
+    const expired = verifyStep(held, { type: 'late-expired' }).state;
+    expect(expired.held).toBeNull();
+    expect(verifyStep(expired, { type: 'token', token: 'x' }).action).toEqual({ type: 'none' });
+  });
+});
+

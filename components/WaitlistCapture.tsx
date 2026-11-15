@@ -23,6 +23,12 @@ const SHARE_TEXT = `I just joined the Taash waitlist. It keeps your income, expe
 
 /** Network failures are retried this many times, after these delays, before giving up. */
 const RETRY_DELAYS_MS = [1500, 3000];
+/**
+ * After a signup is sent without a token, keep the check running this long in case it passes
+ * late; the token then confirms the signup (/api/waitlist/confirm). The server's handle lasts
+ * 10 minutes, but a check that hasn't passed in 3 has stalled for good.
+ */
+const LATE_CHECK_MS = 3 * 60 * 1000;
 
 /**
  * The waitlist signup, used in the hero and in the section near the end of the page.
@@ -53,10 +59,43 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
   const verifyRef = useRef(initialVerifyState);
   const startedRef = useRef(false);
   const graceTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // True while a held signup waits for the check to finish late. The handle itself lives in
+  // verifyRef (lib/waitlist-verify.ts), so every token goes through one decision.
+  const [holding, setHolding] = useState(false);
+  const lateTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const formId = useId();
   const compact = placement !== 'section';
 
-  useEffect(() => () => clearTimeout(graceTimerRef.current), []);
+  useEffect(
+    () => () => {
+      clearTimeout(graceTimerRef.current);
+      clearTimeout(lateTimerRef.current);
+    },
+    []
+  );
+
+  const stopLateCheck = () => {
+    clearTimeout(lateTimerRef.current);
+    setHolding(false);
+  };
+
+  /** The check passed after a held signup was sent: confirm it, so nobody has to approve it. */
+  const confirmLate = async (handle: string, token: string) => {
+    stopLateCheck();
+    try {
+      const response = await fetch('/api/waitlist/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: handle, turnstileToken: token }),
+        keepalive: true,
+      });
+      track('Waitlist Confirmed Late', { placement, ok: response.ok });
+    } catch {
+      track('Waitlist Confirmed Late', { placement, ok: false });
+      // The signup is safe either way: it's held, and Slack has the approval link.
+      sendClientReport({ type: 'signup-failed', reason: 'late-confirm-network', placement });
+    }
+  };
 
   // Start the check early: once the visitor has interacted with the page (a tap, scroll or key)
   // while this form is on or near the screen. Not at page load, because loading Turnstile for
@@ -115,12 +154,15 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
 
     try {
       const response = await postSignup(payload);
-      const body: { error?: string } = await response.json().catch(() => ({}));
+      const body: { error?: string; confirm?: string } = await response.json().catch(() => ({}));
       if (!response.ok) {
         throw new SignupError(friendlyError(response.status, body.error), `http-${response.status}`);
       }
 
       track('Waitlist Joined', { placement, profession: profession ?? 'none', check: check ?? 'passed' });
+      // Held for approval: if the check passes in the next few minutes (or already passed while
+      // this request was in flight), its token confirms the signup automatically.
+      if (!token && typeof body.confirm === 'string') dispatch({ type: 'held', handle: body.confirm });
       setJoinedHere(true);
       markJoined(firstName);
     } catch (err) {
@@ -134,9 +176,12 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
       }
     } finally {
       setBusy(false);
-      // Tokens are single-use; start on the next one straight away.
-      verifyRef.current = verifyStep(verifyRef.current, { type: 'sent' }).state;
-      if (token) turnstileRef.current?.reset();
+      // Tokens are single-use; start on the next one straight away. A send without a token leaves
+      // any token that arrived meanwhile in place: it was never used, so it's still good.
+      if (token) {
+        verifyRef.current = verifyStep(verifyRef.current, { type: 'sent' }).state;
+        turnstileRef.current?.reset();
+      }
     }
   };
 
@@ -155,6 +200,18 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
         clearTimeout(graceTimerRef.current);
         graceTimerRef.current = setTimeout(() => dispatch({ type: 'timeout' }), GRACE_MS);
         break;
+      case 'confirm-late':
+        void confirmLate(action.handle, action.token);
+        break;
+      case 'watch-late':
+        // Keep the check mounted under the success panel for a while.
+        setHolding(true);
+        clearTimeout(lateTimerRef.current);
+        lateTimerRef.current = setTimeout(() => {
+          dispatch({ type: 'late-expired' });
+          setHolding(false);
+        }, LATE_CHECK_MS);
+        break;
     }
   };
 
@@ -167,141 +224,154 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
     dispatch({ type: 'submit' });
   };
 
-  if (joined) {
-    return (
-      <JoinedPanel
-        firstName={joined.firstName}
-        placement={placement}
-        takeFocus={joinedHere}
-        onReset={() => {
-          setJoinedHere(false);
-          clearJoined();
-        }}
+  // Hidden unless Cloudflare wants a tap, and even then the visitor doesn't have to: a submit
+  // without a token is held for approval instead of being turned away. It sits outside the form
+  // so it stays mounted when the form becomes the success panel, which lets a check that passes
+  // late still confirm the signup. After joining it is visually hidden (not display:none, which
+  // would stop it running).
+  const showTurnstile = turnstileWanted && (!joined || holding);
+  const turnstile = showTurnstile ? (
+    <div
+      className={
+        joined ? 'pointer-events-none absolute size-px overflow-hidden opacity-0' : 'mt-3 flex justify-center empty:hidden'
+      }
+      aria-hidden={joined ? true : undefined}>
+      <Turnstile
+        ref={turnstileRef}
+        siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'}
+        onWidgetLoad={() => dispatch({ type: 'started' })}
+        onSuccess={(token) => dispatch({ type: 'token', token })}
+        onError={() => dispatch({ type: 'error' })}
+        onUnsupported={() => dispatch({ type: 'unsupported' })}
+        onExpire={() => dispatch({ type: 'expire' })}
+        onBeforeInteractive={() => dispatch({ type: 'interactive' })}
+        options={{ theme: 'light', appearance: 'interaction-only', size: 'flexible' }}
       />
-    );
-  }
+    </div>
+  ) : null;
 
   return (
-    <form
-      ref={formRef}
-      onSubmit={onSubmit}
-      onFocusCapture={start}
-      aria-describedby={`${formId}-terms`}
-      className='relative w-full'>
-      <div className={compact ? 'grid gap-2.5 sm:grid-cols-2' : 'grid gap-4'}>
-        <Field
-          id={`${formId}-name`}
-          label='First name'
-          hideLabel={compact}
-          name='firstName'
-          placeholder={compact ? 'First name' : 'e.g. Ada'}
-          autoComplete='given-name'
-          autoCapitalize='words'
-          enterKeyHint='next'
-          maxLength={100}
-          required
+    <div className='relative w-full'>
+      {joined ? (
+        <JoinedPanel
+          firstName={joined.firstName}
+          placement={placement}
+          takeFocus={joinedHere}
+          onReset={() => {
+            // Starting over with another email: the old held signup stays in Slack for approval,
+            // and the next token belongs to the new signup, not the old one.
+            dispatch({ type: 'reset' });
+            stopLateCheck();
+            setJoinedHere(false);
+            clearJoined();
+          }}
         />
-        <Field
-          id={`${formId}-email`}
-          label='Email address'
-          hideLabel={compact}
-          name='email'
-          type='email'
-          inputMode='email'
-          placeholder={compact ? 'Email address' : 'you@example.com'}
-          autoComplete='email'
-          autoCapitalize='none'
-          autoCorrect='off'
-          spellCheck={false}
-          enterKeyHint='go'
-          maxLength={255}
-          required
-        />
-      </div>
-
-      {compact ? null : (
-        <fieldset className='mt-5'>
-          <legend className='text-sm font-semibold text-ink-1000'>
-            What do you do? <span className='font-normal text-ink-600'>(optional)</span>
-          </legend>
-          <div className='mt-2.5 flex flex-wrap gap-2'>
-            {PROFESSIONS.map((p) => (
-              <label key={p} className='cursor-pointer'>
-                <input type='radio' name='profession' value={p} className='peer sr-only' />
-                <span className='inline-flex min-h-10 items-center rounded-full border border-ink-300 bg-white px-4 text-sm font-medium text-ink-900 transition-[background-color,border-color,color,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] select-none active:scale-[0.97] peer-checked:border-ink-1000 peer-checked:bg-ink-1000 peer-checked:text-white peer-focus-visible:ring-[3px] peer-focus-visible:ring-brand-600/40'>
-                  {p}
-                </span>
-              </label>
-            ))}
+      ) : (
+        <form
+          ref={formRef}
+          onSubmit={onSubmit}
+          onFocusCapture={start}
+          aria-describedby={`${formId}-terms`}
+          className='relative w-full'>
+          <div className={compact ? 'grid gap-2.5 sm:grid-cols-2' : 'grid gap-4'}>
+            <Field
+              id={`${formId}-name`}
+              label='First name'
+              hideLabel={compact}
+              name='firstName'
+              placeholder={compact ? 'First name' : 'e.g. Ada'}
+              autoComplete='given-name'
+              autoCapitalize='words'
+              enterKeyHint='next'
+              maxLength={100}
+              required
+            />
+            <Field
+              id={`${formId}-email`}
+              label='Email address'
+              hideLabel={compact}
+              name='email'
+              type='email'
+              inputMode='email'
+              placeholder={compact ? 'Email address' : 'you@example.com'}
+              autoComplete='email'
+              autoCapitalize='none'
+              autoCorrect='off'
+              spellCheck={false}
+              enterKeyHint='go'
+              maxLength={255}
+              required
+            />
           </div>
-        </fieldset>
-      )}
 
-      <div role='alert' aria-live='assertive'>
-        {error ? (
-          <p className='mt-3 rounded-xl border border-negative-600/25 bg-negative-100 px-4 py-3 text-sm text-negative-700'>
-            {error}
+          {compact ? null : (
+            <fieldset className='mt-5'>
+              <legend className='text-sm font-semibold text-ink-1000'>
+                What do you do? <span className='font-normal text-ink-600'>(optional)</span>
+              </legend>
+              <div className='mt-2.5 flex flex-wrap gap-2'>
+                {PROFESSIONS.map((p) => (
+                  <label key={p} className='cursor-pointer'>
+                    <input type='radio' name='profession' value={p} className='peer sr-only' />
+                    <span className='inline-flex min-h-10 items-center rounded-full border border-ink-300 bg-white px-4 text-sm font-medium text-ink-900 transition-[background-color,border-color,color,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] select-none active:scale-[0.97] peer-checked:border-ink-1000 peer-checked:bg-ink-1000 peer-checked:text-white peer-focus-visible:ring-[3px] peer-focus-visible:ring-brand-600/40'>
+                      {p}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          )}
+
+          <div role='alert' aria-live='assertive'>
+            {error ? (
+              <p className='mt-3 rounded-xl border border-negative-600/25 bg-negative-100 px-4 py-3 text-sm text-negative-700'>
+                {error}
+              </p>
+            ) : null}
+          </div>
+
+          {/* Left empty by people: it's off-screen, skipped by Tab and hidden from screen readers.
+              Bots fill in every field, and the server quietly drops signups that have it. */}
+          <div aria-hidden='true' className='absolute top-auto -left-[9999px] size-px overflow-hidden'>
+            <label>
+              Leave this empty
+              <input type='text' name='extra_info' tabIndex={-1} autoComplete='off' defaultValue='' />
+            </label>
+          </div>
+
+          <button
+            type='submit'
+            aria-disabled={busy}
+            className='group mt-3 grid h-13 w-full grid-cols-[2.25rem_1fr_2.25rem] items-center gap-2 rounded-full bg-ink-1000 px-2 font-semibold text-white shadow-[0_10px_30px_-12px_rgb(15_23_42/0.55)] transition-[transform,background-color] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-ink-900 active:scale-[0.98] aria-disabled:cursor-wait aria-disabled:opacity-85'>
+            <span aria-hidden='true' />
+            <span>
+              {busy ? 'Joining…' : 'Join the waitlist'}
+            </span>
+            <span className='grid size-9 place-items-center rounded-full bg-white/12 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:translate-x-0.5'>
+              {busy ? <Spinner /> : <ArrowIcon />}
+            </span>
+          </button>
+
+          <ul className='mt-3.5 flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-[13px] font-medium text-ink-800 sm:justify-start'>
+            <li className='flex items-center gap-1.5'>
+              <TickIcon /> Free to join
+            </li>
+            <li className='flex items-center gap-1.5'>
+              <TickIcon /> Lifetime discount for early members
+            </li>
+          </ul>
+          <p
+            id={`${formId}-terms`}
+            className='mt-2 text-center text-xs leading-relaxed text-ink-600 sm:text-left'>
+            By joining you agree to get emails about Taash. Leave anytime.{' '}
+            <Link href='/privacy' className='underline underline-offset-2 hover:text-ink-900'>
+              Privacy policy
+            </Link>
           </p>
-        ) : null}
-      </div>
-
-      {/* Left empty by people: it's off-screen, skipped by Tab and hidden from screen readers.
-          Bots fill in every field, and the server quietly drops signups that have it. */}
-      <div aria-hidden='true' className='absolute top-auto -left-[9999px] size-px overflow-hidden'>
-        <label>
-          Leave this empty
-          <input type='text' name='extra_info' tabIndex={-1} autoComplete='off' defaultValue='' />
-        </label>
-      </div>
-
-      {/* Hidden unless Cloudflare wants a tap, and even then the visitor doesn't have to: a
-          submit without a token is held for approval instead of being turned away. */}
-      {turnstileWanted ? (
-        <div className='mt-3 flex justify-center empty:hidden'>
-          <Turnstile
-            ref={turnstileRef}
-            siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'}
-            onWidgetLoad={() => dispatch({ type: 'started' })}
-            onSuccess={(token) => dispatch({ type: 'token', token })}
-            onError={() => dispatch({ type: 'error' })}
-            onUnsupported={() => dispatch({ type: 'unsupported' })}
-            onExpire={() => dispatch({ type: 'expire' })}
-            onBeforeInteractive={() => dispatch({ type: 'interactive' })}
-            options={{ theme: 'light', appearance: 'interaction-only', size: 'flexible' }}
-          />
-        </div>
-      ) : null}
-
-      <button
-        type='submit'
-        aria-disabled={busy}
-        className='group mt-3 grid h-13 w-full grid-cols-[2.25rem_1fr_2.25rem] items-center gap-2 rounded-full bg-ink-1000 px-2 font-semibold text-white shadow-[0_10px_30px_-12px_rgb(15_23_42/0.55)] transition-[transform,background-color] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-ink-900 active:scale-[0.98] aria-disabled:cursor-wait aria-disabled:opacity-85'>
-        <span aria-hidden='true' />
-        <span>
-          {busy ? 'Joining…' : 'Join the waitlist'}
-        </span>
-        <span className='grid size-9 place-items-center rounded-full bg-white/12 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:translate-x-0.5'>
-          {busy ? <Spinner /> : <ArrowIcon />}
-        </span>
-      </button>
-
-      <ul className='mt-3.5 flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-[13px] font-medium text-ink-800 sm:justify-start'>
-        <li className='flex items-center gap-1.5'>
-          <TickIcon /> Free to join
-        </li>
-        <li className='flex items-center gap-1.5'>
-          <TickIcon /> Lifetime discount for early members
-        </li>
-      </ul>
-      <p
-        id={`${formId}-terms`}
-        className='mt-2 text-center text-xs leading-relaxed text-ink-600 sm:text-left'>
-        By joining you agree to get emails about Taash. Leave anytime.{' '}
-        <Link href='/privacy' className='underline underline-offset-2 hover:text-ink-900'>
-          Privacy policy
-        </Link>
-      </p>
-    </form>
+        </form>
+      )}
+      {turnstile}
+    </div>
   );
 }
 
