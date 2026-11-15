@@ -1,7 +1,10 @@
 'use client';
 
+import { readPaidSocialVisit } from '@/lib/waitlist-attribution';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect } from 'react';
 
 /**
  * Links to /email-preferences carry the person's private token in ?t=, and Vercel collects
@@ -14,9 +17,20 @@ function withoutToken<T extends { url: string }>(event: T): T {
   return { ...event, url: url.toString() };
 }
 
+function CapturePaidSocialVisit() {
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    readPaidSocialVisit();
+  }, [searchParams]);
+  return null;
+}
+
 export default function SiteAnalytics() {
   return (
     <>
+      <Suspense fallback={null}>
+        <CapturePaidSocialVisit />
+      </Suspense>
       <Analytics beforeSend={withoutToken} />
       <SpeedInsights beforeSend={withoutToken} />
     </>

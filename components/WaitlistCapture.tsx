@@ -2,6 +2,7 @@
 
 import { sendClientReport } from '@/lib/client-report';
 import { PROFESSIONS } from '@/lib/professions';
+import { readPaidSocialVisit } from '@/lib/waitlist-attribution';
 import { clearJoined, markJoined, useWaitlistJoined } from '@/lib/waitlist-store';
 import {
   GRACE_MS,
@@ -150,6 +151,7 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
       turnstileToken: token,
       check,
       extra_info: String(data.get('extra_info') ?? ''),
+      attribution: readPaidSocialVisit(),
     });
 
     try {

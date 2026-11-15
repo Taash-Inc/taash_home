@@ -141,6 +141,35 @@ test('signup accepts a first name and email without profession or income', async
   }
 });
 
+test('a verified signup saves the platform and campaign from the Meta ad', async () => {
+  const route = waitlist();
+  const response = await route.POST(request({
+    ...signup,
+    attribution: { source: 'fb', medium: 'paid_social', campaign: 'taash_waitlist', content: 'overview_carousel' },
+  }));
+  assert.equal(response.status, 201);
+  const row = JSON.parse(route.writes[0].init.body);
+  assert.equal(row.paid_social_platform, 'facebook');
+  assert.equal(row.paid_social_campaign, 'taash_waitlist');
+  assert.equal(row.paid_social_content, 'overview_carousel');
+  assert.ok(Number.isFinite(Date.parse(row.paid_social_submitted_at)));
+});
+
+test('a held Instagram signup retains its source and original submission time', async () => {
+  const route = waitlist(201, undefined, { captcha: false });
+  const response = await route.POST(request({
+    ...signup,
+    attribution: { source: 'ig', medium: 'paid_social', campaign: 'taash_waitlist', content: 'overview_carousel' },
+  }));
+  assert.equal(response.status, 201);
+  assert.equal(route.writes.length, 0, 'the signup has not been confirmed yet');
+  const fields = route.pending[0].attribution;
+  assert.equal(fields?.paid_social_platform, 'instagram');
+  assert.equal(fields?.paid_social_campaign, 'taash_waitlist');
+  assert.equal(fields?.paid_social_content, 'overview_carousel');
+  assert.ok(Number.isFinite(Date.parse(fields?.paid_social_submitted_at)));
+});
+
 test('signup still requires a name and rejects a non-string profession', async () => {
   const route = waitlist();
   assert.equal((await route.POST(request({ ...signup, fullName: '' }))).status, 400);

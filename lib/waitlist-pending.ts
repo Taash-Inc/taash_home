@@ -1,6 +1,7 @@
 import { logEvent } from './log';
 import { APPROVAL_LINK_DAYS, signApproval } from './signing';
 import { SITE_URL } from './site';
+import type { PaidSocialColumns } from './waitlist-attribution';
 import { headers, postToSlack, supabase, syncSignup } from './waitlist-sync';
 
 /**
@@ -16,6 +17,7 @@ import { headers, postToSlack, supabase, syncSignup } from './waitlist-sync';
  */
 const TABLE = 'waitlist_pending';
 const COLUMNS = 'id,full_name,email,profession,monthly_income,reason';
+const APPROVAL_COLUMNS = `${COLUMNS},paid_social_platform,paid_social_campaign,paid_social_content,paid_social_submitted_at`;
 /**
  * The hourly limits. The database enforces them inside the insert (the trigger in
  * supabase/migrations/20261113190000_waitlist_pending.sql), so simultaneous requests can't all
@@ -33,6 +35,7 @@ export type PendingSignup = {
   monthlyIncome: string | null;
   reason: string;
   ipHash: string | null;
+  attribution?: PaidSocialColumns;
 };
 
 type PendingRow = {
@@ -42,6 +45,10 @@ type PendingRow = {
   profession: string | null;
   monthly_income: string | null;
   reason: string;
+  paid_social_platform?: PaidSocialColumns['paid_social_platform'] | null;
+  paid_social_campaign?: string | null;
+  paid_social_content?: string | null;
+  paid_social_submitted_at?: string | null;
 };
 
 export const isPendingId = (id: unknown): id is string => typeof id === 'string' && UUID.test(id);
@@ -66,6 +73,7 @@ export async function savePending(signup: PendingSignup): Promise<SaveResult> {
         monthly_income: signup.monthlyIncome,
         reason: signup.reason,
         ip_hash: signup.ipHash,
+        ...signup.attribution,
       }),
     });
     if (response.ok) {
@@ -131,7 +139,8 @@ async function claim(id: string, status: 'approved' | 'discarded'): Promise<Pend
   const db = supabase();
   if (!db || !isPendingId(id)) return 'error';
   try {
-    const response = await fetch(`${db.url}/rest/v1/${TABLE}?id=eq.${id}&status=eq.pending&select=${COLUMNS}`, {
+    const columns = status === 'approved' ? APPROVAL_COLUMNS : COLUMNS;
+    const response = await fetch(`${db.url}/rest/v1/${TABLE}?id=eq.${id}&status=eq.pending&select=${columns}`, {
       method: 'PATCH',
       headers: { ...headers(db.key, true), Prefer: 'return=representation' },
       body: JSON.stringify({ status, handled_at: new Date().toISOString() }),
@@ -198,6 +207,12 @@ export async function approvePending(id: string): Promise<ApproveResult> {
         email: row.email,
         profession: row.profession,
         monthly_income: row.monthly_income,
+        ...(row.paid_social_platform && {
+          paid_social_platform: row.paid_social_platform,
+          paid_social_campaign: row.paid_social_campaign,
+          paid_social_content: row.paid_social_content,
+          paid_social_submitted_at: row.paid_social_submitted_at,
+        }),
       }),
     });
     const body: { code?: string } = response.ok ? {} : await response.json().catch(() => ({}));
