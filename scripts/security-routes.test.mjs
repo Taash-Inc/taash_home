@@ -114,6 +114,24 @@ test('retry accepts the configured bearer secret', async () => {
   assert.equal(reads, 1);
 });
 
+test('ad spend sync requires its configured cron bearer secret', async () => {
+  for (const secret of [undefined, '', 'sync-secret']) {
+    let calls = 0;
+    const route = handler('app/api/waitlist-ad-spend/route.ts', {
+      env: { CRON_SECRET: secret },
+      providers: { '@/lib/waitlist-ad-spend': {
+        syncWaitlistAdSpend: async () => { calls++; return { synced: 0, skipped: 0, failed: 0 }; },
+      } },
+    });
+    assert.equal((await route.GET(request({}, { authorization: 'Bearer incorrect' }))).status, 401);
+    assert.equal(calls, 0);
+    if (secret) {
+      assert.equal((await route.GET(request({}, { authorization: 'Bearer sync-secret' }))).status, 200);
+      assert.equal(calls, 1);
+    }
+  }
+});
+
 test('signup returns the same public response for a new or existing address', async () => {
   const fresh = waitlist();
   const duplicate = waitlist(409, { code: '23505', details: 'Private signup details' });

@@ -1,6 +1,10 @@
 {
   "crons": [
     {
+      "path": "/api/waitlist-ad-spend",
+      "schedule": "15 13 * * *"
+    },
+    {
       "path": "/api/onesignal-retry",
       "schedule": "0 2 * * *"
     }

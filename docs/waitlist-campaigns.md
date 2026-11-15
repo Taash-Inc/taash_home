@@ -23,6 +23,8 @@ Replace the example campaign and creative names before using it.
 
 ## Read the results
 
+For ad accounts with reporting API access, see [import ad spend automatically](waitlist-ad-spend.md).
+
 1. Open [the campaign report](../supabase/waitlist-campaign-report.sql) in
    the Supabase SQL editor. Enter the reporting dates with their timezone
    offsets. The start is inclusive and the end is exclusive.
