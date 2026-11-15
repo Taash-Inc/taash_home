@@ -38,6 +38,8 @@ reset role;
 \ir ../migrations/20261103190000_lock_down_waitlist.sql
 \ir ../migrations/20261113190000_waitlist_pending.sql
 \ir ../migrations/20261113190000_waitlist_pending.sql
+\ir ../migrations/20261115190000_waitlist_paid_social.sql
+\ir ../migrations/20261115190000_waitlist_paid_social.sql
 
 do $$
 declare principal text; tab text; statement text;
@@ -71,6 +73,11 @@ $$;
 
 set role service_role;
 insert into public.waitlist (email, full_name) values ('server@example.invalid','Test Person');
+insert into public.waitlist (
+  email, paid_social_platform, paid_social_campaign, paid_social_content, paid_social_submitted_at
+) values (
+  'paid@example.invalid', 'facebook', 'taash_waitlist', 'overview_carousel', '2026-11-19 09:30:00-08'
+);
 insert into public.email_preference_tokens values ('server@example.invalid','dummy-token');
 insert into public.waitlist_pending (full_name, email, reason) values ('Held Person','held@example.invalid','no-token:pending');
 delete from public.waitlist_pending where email='held@example.invalid';
@@ -81,6 +88,13 @@ do $$
 begin
   if not exists (select 1 from public.waitlist_backup where email='server@example.invalid') then
     raise exception 'Service signup failed to reach backup';
+  end if;
+  if not exists (
+    select 1 from public.waitlist_backup where email='paid@example.invalid'
+      and paid_social_platform='facebook' and paid_social_campaign='taash_waitlist'
+      and paid_social_content='overview_carousel' and paid_social_submitted_at='2026-11-19 09:30:00-08'
+  ) then
+    raise exception 'Waitlist backup lost paid signup attribution';
   end if;
   if has_function_privilege('anon','public.backup_waitlist()','EXECUTE')
      or has_function_privilege('authenticated','public.backup_waitlist()','EXECUTE') then

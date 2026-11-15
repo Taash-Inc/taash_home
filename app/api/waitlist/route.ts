@@ -3,6 +3,7 @@ import { isProfession } from '@/lib/professions';
 import { readJsonObject, RequestInputError } from '@/lib/request-json';
 import { CONFIRM_WINDOW_MS, clientIp, hashIp, refFor, signConfirm } from '@/lib/signing';
 import { verifyTurnstile } from '@/lib/turnstile';
+import { paidSocialColumns, type PaidSocialColumns } from '@/lib/waitlist-attribution';
 import { alertRateLimit, approveUrl, savePending } from '@/lib/waitlist-pending';
 import { announceSignup, postToSlack, syncSignup } from '@/lib/waitlist-sync';
 import { isClientCheck } from '@/lib/waitlist-verify';
@@ -21,7 +22,7 @@ async function insertToSupabase(data: {
   email: string;
   profession: string | null;
   monthly_income: string | null;
-}) {
+} & Partial<PaidSocialColumns>) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
 
@@ -122,6 +123,7 @@ export async function POST(request: NextRequest) {
     }
 
     const ref = refFor(sanitizedData.email);
+    const attribution = paidSocialColumns(body.attribution);
     const verified = turnstileToken
       ? await verifyTurnstile(turnstileToken, {
           secret: process.env.TURNSTILE_SECRET_KEY,
@@ -131,7 +133,7 @@ export async function POST(request: NextRequest) {
 
     if (!verified) {
       const reason = turnstileToken ? 'rejected' : `no-token:${isClientCheck(check) ? check : 'unknown'}`;
-      return holdForApproval(sanitizedData, reason, ref, request.headers);
+      return holdForApproval(sanitizedData, reason, ref, request.headers, attribution);
     }
 
     // Insert into Supabase using REST API
@@ -142,6 +144,7 @@ export async function POST(request: NextRequest) {
         email: sanitizedData.email,
         profession: sanitizedData.profession,
         monthly_income: sanitizedData.monthlyIncome,
+        ...attribution,
       });
       // A duplicate gets the same answer as a new signup, so the form can't be used to test
       // whether an address is on the list.
@@ -189,10 +192,16 @@ export async function POST(request: NextRequest) {
 type Signup = { fullName: string; email: string; profession: string | null; monthlyIncome: string | null };
 
 /** The check didn't pass: keep them for approval instead of turning them away. */
-async function holdForApproval(signup: Signup, reason: string, ref: string, headers: Headers) {
+async function holdForApproval(
+  signup: Signup,
+  reason: string,
+  ref: string,
+  headers: Headers,
+  attribution: PaidSocialColumns | null
+) {
   const ipHash = hashIp(clientIp(headers));
   // The database enforces the hourly limits inside this insert (see lib/waitlist-pending.ts).
-  const result = await savePending({ ...signup, reason, ipHash });
+  const result = await savePending({ ...signup, reason, ipHash, ...(attribution && { attribution }) });
   if (!result.saved && 'rateLimited' in result) {
     logEvent('warn', 'waitlist.rate_limited', { ref, scope: result.rateLimited });
     after(() => alertRateLimit(result.rateLimited));

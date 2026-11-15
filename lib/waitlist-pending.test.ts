@@ -51,6 +51,19 @@ describe('savePending', () => {
     expect(JSON.parse(String(init?.body))).toMatchObject({ email: 'ada@example.com', reason: 'no-token:pending', ip_hash: 'abc' });
   });
 
+  it('keeps the campaign fields on a signup that is still waiting for approval', async () => {
+    const attribution = {
+      paid_social_platform: 'instagram',
+      paid_social_campaign: 'taash_waitlist',
+      paid_social_content: null,
+      paid_social_submitted_at: '2026-11-19T17:18:00.000Z',
+    } as const;
+    fetchMock.mockResolvedValueOnce(json(201, [{ id: ID }]));
+    expect(await savePending({ ...signup, attribution })).toEqual({ saved: true, id: ID });
+    expect(calls()).toEqual(['POST waitlist_pending?select=id']);
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toMatchObject(attribution);
+  });
+
   it('treats a repeat of the same email as already saved', async () => {
     fetchMock.mockResolvedValueOnce(json(409, { code: '23505' }));
     expect(await savePending(signup)).toEqual({ saved: false, duplicate: true });
@@ -109,6 +122,21 @@ describe('approval', () => {
     expect(insert).toBe('POST waitlist');
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(syncSignup).toHaveBeenCalledWith(expect.objectContaining({ email: 'ada@example.com', firstName: 'Ada', lastName: 'Obi' }));
+  });
+
+  it('retains the original Instagram campaign when a held signup is confirmed', async () => {
+    const attribution = {
+      paid_social_platform: 'instagram',
+      paid_social_campaign: 'taash_waitlist',
+      paid_social_content: 'overview_carousel',
+      paid_social_submitted_at: '2026-11-19T17:18:00+00:00',
+    };
+    fetchMock
+      .mockResolvedValueOnce(json(200, [{ ...ROW, ...attribution }]))
+      .mockResolvedValueOnce(new Response(null, { status: 201 }));
+    expect((await approvePending(ID)).status).toBe('approved');
+    expect(calls()[0]).toContain('paid_social_platform');
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toMatchObject(attribution);
   });
 
   // PR #60 review: approve read the row, then inserted, then deleted, so a discard landing in
