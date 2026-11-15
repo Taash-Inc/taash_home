@@ -59,9 +59,9 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
   const verifyRef = useRef(initialVerifyState);
   const startedRef = useRef(false);
   const graceTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  // Set while a signup sent without a token waits for the check to finish late (see send()).
-  const [lateConfirm, setLateConfirm] = useState<string | null>(null);
-  const lateConfirmRef = useRef<string | null>(null);
+  // True while a held signup waits for the check to finish late. The handle itself lives in
+  // verifyRef (lib/waitlist-verify.ts), so every token goes through one decision.
+  const [holding, setHolding] = useState(false);
   const lateTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const formId = useId();
   const compact = placement !== 'section';
@@ -76,8 +76,7 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
 
   const stopLateCheck = () => {
     clearTimeout(lateTimerRef.current);
-    lateConfirmRef.current = null;
-    setLateConfirm(null);
+    setHolding(false);
   };
 
   /** The check passed after a held signup was sent: confirm it, so nobody has to approve it. */
@@ -161,14 +160,9 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
       }
 
       track('Waitlist Joined', { placement, profession: profession ?? 'none', check: check ?? 'passed' });
-      // Held for approval: keep the check running (it stays mounted under the success panel), and
-      // if it passes in the next few minutes, its token confirms the signup automatically.
-      if (!token && typeof body.confirm === 'string') {
-        lateConfirmRef.current = body.confirm;
-        setLateConfirm(body.confirm);
-        clearTimeout(lateTimerRef.current);
-        lateTimerRef.current = setTimeout(stopLateCheck, LATE_CHECK_MS);
-      }
+      // Held for approval: if the check passes in the next few minutes (or already passed while
+      // this request was in flight), its token confirms the signup automatically.
+      if (!token && typeof body.confirm === 'string') dispatch({ type: 'held', handle: body.confirm });
       setJoinedHere(true);
       markJoined(firstName);
     } catch (err) {
@@ -182,9 +176,12 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
       }
     } finally {
       setBusy(false);
-      // Tokens are single-use; start on the next one straight away.
-      verifyRef.current = verifyStep(verifyRef.current, { type: 'sent' }).state;
-      if (token) turnstileRef.current?.reset();
+      // Tokens are single-use; start on the next one straight away. A send without a token leaves
+      // any token that arrived meanwhile in place: it was never used, so it's still good.
+      if (token) {
+        verifyRef.current = verifyStep(verifyRef.current, { type: 'sent' }).state;
+        turnstileRef.current?.reset();
+      }
     }
   };
 
@@ -203,6 +200,18 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
         clearTimeout(graceTimerRef.current);
         graceTimerRef.current = setTimeout(() => dispatch({ type: 'timeout' }), GRACE_MS);
         break;
+      case 'confirm-late':
+        void confirmLate(action.handle, action.token);
+        break;
+      case 'watch-late':
+        // Keep the check mounted under the success panel for a while.
+        setHolding(true);
+        clearTimeout(lateTimerRef.current);
+        lateTimerRef.current = setTimeout(() => {
+          dispatch({ type: 'late-expired' });
+          setHolding(false);
+        }, LATE_CHECK_MS);
+        break;
     }
   };
 
@@ -220,7 +229,7 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
   // so it stays mounted when the form becomes the success panel, which lets a check that passes
   // late still confirm the signup. After joining it is visually hidden (not display:none, which
   // would stop it running).
-  const showTurnstile = turnstileWanted && (!joined || lateConfirm !== null);
+  const showTurnstile = turnstileWanted && (!joined || holding);
   const turnstile = showTurnstile ? (
     <div
       className={
@@ -231,11 +240,7 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
         ref={turnstileRef}
         siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'}
         onWidgetLoad={() => dispatch({ type: 'started' })}
-        onSuccess={(token) => {
-          const handle = lateConfirmRef.current;
-          if (handle) void confirmLate(handle, token);
-          else dispatch({ type: 'token', token });
-        }}
+        onSuccess={(token) => dispatch({ type: 'token', token })}
         onError={() => dispatch({ type: 'error' })}
         onUnsupported={() => dispatch({ type: 'unsupported' })}
         onExpire={() => dispatch({ type: 'expire' })}
@@ -253,6 +258,10 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
           placement={placement}
           takeFocus={joinedHere}
           onReset={() => {
+            // Starting over with another email: the old held signup stays in Slack for approval,
+            // and the next token belongs to the new signup, not the old one.
+            dispatch({ type: 'reset' });
+            stopLateCheck();
             setJoinedHere(false);
             clearJoined();
           }}
