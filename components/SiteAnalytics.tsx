@@ -1,6 +1,6 @@
 'use client';
 
-import { readPaidSocialVisit } from '@/lib/waitlist-attribution';
+import { readCampaignVisit } from '@/lib/waitlist-attribution';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { useSearchParams } from 'next/navigation';
@@ -17,10 +17,10 @@ function withoutToken<T extends { url: string }>(event: T): T {
   return { ...event, url: url.toString() };
 }
 
-function CapturePaidSocialVisit() {
+function CaptureCampaignVisit() {
   const searchParams = useSearchParams();
   useEffect(() => {
-    readPaidSocialVisit();
+    readCampaignVisit();
   }, [searchParams]);
   return null;
 }
@@ -29,7 +29,7 @@ export default function SiteAnalytics() {
   return (
     <>
       <Suspense fallback={null}>
-        <CapturePaidSocialVisit />
+        <CaptureCampaignVisit />
       </Suspense>
       <Analytics beforeSend={withoutToken} />
       <SpeedInsights beforeSend={withoutToken} />

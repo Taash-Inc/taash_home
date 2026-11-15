@@ -40,6 +40,8 @@ reset role;
 \ir ../migrations/20261113190000_waitlist_pending.sql
 \ir ../migrations/20261115190000_waitlist_paid_social.sql
 \ir ../migrations/20261115190000_waitlist_paid_social.sql
+\ir ../migrations/20261115230000_waitlist_campaign_attribution.sql
+\ir ../migrations/20261115230000_waitlist_campaign_attribution.sql
 
 do $$
 declare principal text; tab text; statement text;
@@ -78,6 +80,11 @@ insert into public.waitlist (
 ) values (
   'paid@example.invalid', 'facebook', 'taash_waitlist', 'overview_carousel', '2026-11-19 09:30:00-08'
 );
+insert into public.waitlist (
+  email, campaign_source, campaign_medium, campaign_name, campaign_content, campaign_submitted_at
+) values (
+  'campaign@example.invalid', 'partner.example', 'referral', 'launch_waitlist', 'sidebar', '2026-11-19 09:30:00-08'
+);
 insert into public.email_preference_tokens values ('server@example.invalid','dummy-token');
 insert into public.waitlist_pending (full_name, email, reason) values ('Held Person','held@example.invalid','no-token:pending');
 delete from public.waitlist_pending where email='held@example.invalid';
@@ -95,6 +102,14 @@ begin
       and paid_social_content='overview_carousel' and paid_social_submitted_at='2026-11-19 09:30:00-08'
   ) then
     raise exception 'Waitlist backup lost paid signup attribution';
+  end if;
+  if not exists (
+    select 1 from public.waitlist_backup where email='campaign@example.invalid'
+      and campaign_source='partner.example' and campaign_medium='referral' and campaign_name='launch_waitlist'
+      and campaign_content='sidebar' and campaign_submitted_at='2026-11-19 09:30:00-08'
+      and paid_social_platform is null
+  ) then
+    raise exception 'Waitlist backup lost campaign attribution';
   end if;
   if has_function_privilege('anon','public.backup_waitlist()','EXECUTE')
      or has_function_privilege('authenticated','public.backup_waitlist()','EXECUTE') then

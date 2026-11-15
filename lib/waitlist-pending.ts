@@ -1,7 +1,7 @@
 import { logEvent } from './log';
 import { APPROVAL_LINK_DAYS, signApproval } from './signing';
 import { SITE_URL } from './site';
-import type { PaidSocialColumns } from './waitlist-attribution';
+import type { SignupAttributionColumns } from './waitlist-attribution';
 import { headers, postToSlack, supabase, syncSignup } from './waitlist-sync';
 
 /**
@@ -17,7 +17,11 @@ import { headers, postToSlack, supabase, syncSignup } from './waitlist-sync';
  */
 const TABLE = 'waitlist_pending';
 const COLUMNS = 'id,full_name,email,profession,monthly_income,reason';
-const APPROVAL_COLUMNS = `${COLUMNS},paid_social_platform,paid_social_campaign,paid_social_content,paid_social_submitted_at`;
+const APPROVAL_COLUMNS = [
+  COLUMNS,
+  'campaign_source', 'campaign_medium', 'campaign_name', 'campaign_content', 'campaign_submitted_at',
+  'paid_social_platform', 'paid_social_campaign', 'paid_social_content', 'paid_social_submitted_at',
+].join(',');
 /**
  * The hourly limits. The database enforces them inside the insert (the trigger in
  * supabase/migrations/20261113190000_waitlist_pending.sql), so simultaneous requests can't all
@@ -35,7 +39,7 @@ export type PendingSignup = {
   monthlyIncome: string | null;
   reason: string;
   ipHash: string | null;
-  attribution?: PaidSocialColumns;
+  attribution?: SignupAttributionColumns;
 };
 
 type PendingRow = {
@@ -45,10 +49,8 @@ type PendingRow = {
   profession: string | null;
   monthly_income: string | null;
   reason: string;
-  paid_social_platform?: PaidSocialColumns['paid_social_platform'] | null;
-  paid_social_campaign?: string | null;
-  paid_social_content?: string | null;
-  paid_social_submitted_at?: string | null;
+} & {
+  [Column in keyof SignupAttributionColumns]?: SignupAttributionColumns[Column] | null;
 };
 
 export const isPendingId = (id: unknown): id is string => typeof id === 'string' && UUID.test(id);
@@ -207,6 +209,13 @@ export async function approvePending(id: string): Promise<ApproveResult> {
         email: row.email,
         profession: row.profession,
         monthly_income: row.monthly_income,
+        ...(row.campaign_source && {
+          campaign_source: row.campaign_source,
+          campaign_medium: row.campaign_medium,
+          campaign_name: row.campaign_name,
+          campaign_content: row.campaign_content,
+          campaign_submitted_at: row.campaign_submitted_at,
+        }),
         ...(row.paid_social_platform && {
           paid_social_platform: row.paid_social_platform,
           paid_social_campaign: row.paid_social_campaign,
