@@ -60,7 +60,10 @@ function waitlist(status = 201, errorBody, { captcha = true, pendingResult } = {
     env: { NEXT_PUBLIC_SUPABASE_URL: 'https://db.example.invalid', SUPABASE_SERVICE_KEY: 'dummy-key' },
     providers: {
       '@/lib/turnstile': { verifyTurnstile: async () => { captchas++; return captcha; } },
-      '@/lib/signing': { clientIp: () => '102.89.1.2', hashIp: () => 'ip-hash', refFor: () => 'ref123' },
+      '@/lib/signing': {
+        clientIp: () => '102.89.1.2', hashIp: () => 'ip-hash', refFor: () => 'ref123',
+        signConfirm: (id, exp) => `sig-${id}-${exp > 0}`, CONFIRM_WINDOW_MS: 600000,
+      },
       '@/lib/waitlist-pending': {
         // Never settles: a 429 must not wait on the Slack alert.
         alertRateLimit: (scope) => { limitAlerts.push(scope); return new Promise(() => {}); },
@@ -288,7 +291,7 @@ test('a signup without a token is held for approval, not turned away', async () 
   const { turnstileToken: _t, ...noToken } = signup;
   const response = await route.POST(request({ ...noToken, check: 'pending' }));
   assert.equal(response.status, 201);
-  assert.deepEqual(await response.json(), { message: 'Successfully joined the waitlist!' });
+  assert.equal((await response.json()).message, 'Successfully joined the waitlist!');
   assert.equal(route.captchas(), 0);
   assert.equal(route.writes.length, 0, 'nothing is written to the real waitlist');
   assert.deepEqual(JSON.parse(JSON.stringify(route.pending)), [{
@@ -449,4 +452,82 @@ test('names on the approval page are escaped', async () => {
   const html = await (await route.GET(approveGet('good'))).text();
   assert.doesNotMatch(html, /<script>alert/);
   assert.match(html, /&lt;script&gt;/);
+});
+
+// 14 Nov 2026: the first real signup was held only because Cloudflare's check was still running
+// after 3 seconds. The browser now gets a signed handle so a late token can confirm it.
+test('a held signup gives the browser a handle to confirm it later; other answers do not', async () => {
+  const held = waitlist();
+  const body = await (await held.POST(request({ ...signup, turnstileToken: null, check: 'pending' }))).json();
+  assert.match(body.confirm, /^pending-1\.\d+\.sig-pending-1-true$/);
+  assert.equal(body.message, 'Successfully joined the waitlist!');
+
+  const verified = await (await waitlist().POST(request(signup))).json();
+  assert.equal(verified.confirm, undefined);
+  const duplicate = await (await waitlist(201, undefined, { pendingResult: { saved: false, duplicate: true } })
+    .POST(request({ ...signup, turnstileToken: null }))).json();
+  assert.equal(duplicate.confirm, undefined);
+});
+
+const PENDING_ID = '3f1c2b4a-1d2e-4f5a-8b9c-0d1e2f3a4b5c';
+function confirmRoute({ check = 'ok', captcha = true, approve = { status: 'approved', row: { full_name: 'Ada Obi' } } } = {}) {
+  const calls = { captcha: 0, approve: [] };
+  const slack = [];
+  const route = handler('app/api/waitlist/confirm/route.ts', {
+    env: { TURNSTILE_SECRET_KEY: 'secret' },
+    providers: {
+      '@/lib/signing': { checkConfirm: (id, exp, sig) => (sig === 'good' ? check : 'invalid') },
+      '@/lib/turnstile': { verifyTurnstile: async () => { calls.captcha++; return captcha; } },
+      '@/lib/waitlist-pending': {
+        isPendingId: (id) => typeof id === 'string' && /^[0-9a-f-]{36}$/.test(id),
+        approvePending: async (id) => { calls.approve.push(id); return approve; },
+      },
+      '@/lib/waitlist-sync': { postToSlack: async (text) => { slack.push(text); } },
+    },
+  });
+  return { ...route, calls, slack };
+}
+const handleFor = (sig) => `${PENDING_ID}.4102444800000.${sig}`;
+
+test('a late confirmation needs a valid handle before Cloudflare is even asked', async () => {
+  const route = confirmRoute();
+  for (const body of [{}, { confirm: 'x', turnstileToken: 't' }, { confirm: handleFor('bad'), turnstileToken: 't' },
+    { confirm: handleFor('good') }, { confirm: handleFor('good'), turnstileToken: 'a'.repeat(2049) },
+    { confirm: `../${PENDING_ID}.1.good`, turnstileToken: 't' }]) {
+    assert.equal((await route.POST(request(body))).status, 400, JSON.stringify(body).slice(0, 60));
+  }
+  const expired = confirmRoute({ check: 'expired' });
+  assert.equal((await expired.POST(request({ confirm: handleFor('good'), turnstileToken: 't' }))).status, 410);
+  assert.equal(route.calls.captcha + expired.calls.captcha, 0);
+  assert.equal(route.calls.approve.length + expired.calls.approve.length, 0);
+});
+
+test('a late token Cloudflare rejects approves nothing', async () => {
+  const route = confirmRoute({ captcha: false });
+  assert.equal((await route.POST(request({ confirm: handleFor('good'), turnstileToken: 't' }))).status, 400);
+  assert.equal(route.calls.captcha, 1);
+  assert.equal(route.calls.approve.length, 0);
+});
+
+test('a valid late token approves the held signup and tells Slack, after the response', async () => {
+  const route = confirmRoute();
+  const response = await route.POST(request({ confirm: handleFor('good'), turnstileToken: 't' }));
+  assert.equal(response.status, 200);
+  assert.deepEqual(route.calls.approve, [PENDING_ID]);
+  assert.equal(route.slack.length, 0, 'Slack must not delay the response');
+  for (const callback of route.callbacks) await callback();
+  assert.match(route.slack[0], /Auto-approved/);
+  assert.match(route.slack[0], /Ada Obi/);
+});
+
+test('a late token for a signup you already handled changes nothing', async () => {
+  const route = confirmRoute({ approve: { status: 'missing' } });
+  assert.equal((await route.POST(request({ confirm: handleFor('good'), turnstileToken: 't' }))).status, 200);
+  assert.equal(route.callbacks.length, 0);
+});
+
+test('a failed auto-approval leaves the signup for manual approval', async () => {
+  const route = confirmRoute({ approve: { status: 'error', error: 'Waitlist insert failed: HTTP 500' } });
+  assert.equal((await route.POST(request({ confirm: handleFor('good'), turnstileToken: 't' }))).status, 500);
+  assert.equal(route.callbacks.length, 0);
 });

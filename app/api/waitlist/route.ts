@@ -1,7 +1,7 @@
 import { logEvent } from '@/lib/log';
 import { isProfession } from '@/lib/professions';
 import { readJsonObject, RequestInputError } from '@/lib/request-json';
-import { clientIp, hashIp, refFor } from '@/lib/signing';
+import { CONFIRM_WINDOW_MS, clientIp, hashIp, refFor, signConfirm } from '@/lib/signing';
 import { verifyTurnstile } from '@/lib/turnstile';
 import { alertRateLimit, approveUrl, savePending } from '@/lib/waitlist-pending';
 import { announceSignup, postToSlack, syncSignup } from '@/lib/waitlist-sync';
@@ -210,7 +210,15 @@ async function holdForApproval(signup: Signup, reason: string, ref: string, head
   logEvent('warn', 'waitlist.pending', { ref, reason, id: result.id });
   const link = result.id ? approveUrl(result.id) : null;
   after(() => announceSignup(signup, { reason, approveUrl: link }));
-  return NextResponse.json(JOINED, { status: 201 });
+  // The check often finishes a few seconds after Join on slow phones. This handle lets the same
+  // browser send the late token to /api/waitlist/confirm, which approves the signup itself.
+  return NextResponse.json({ ...JOINED, ...(result.id ? { confirm: confirmHandle(result.id) } : {}) }, { status: 201 });
+}
+
+function confirmHandle(id: string): string | undefined {
+  const expiresAt = Date.now() + CONFIRM_WINDOW_MS;
+  const signature = signConfirm(id, expiresAt);
+  return signature ? `${id}.${expiresAt}.${signature}` : undefined;
 }
 
 /**

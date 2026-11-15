@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkApproval, clientIp, hashIp, refFor, signApproval } from './signing';
+import { checkApproval, checkConfirm, clientIp, hashIp, refFor, signApproval, signConfirm } from './signing';
 
 const SECRET = 'service-key';
 const ID = '3f1c2b4a-1d2e-4f5a-8b9c-0d1e2f3a4b5c';
@@ -30,6 +30,23 @@ describe('approval links', () => {
 
   it('uses separate keys per purpose, so a reference is not a valid signature', () => {
     expect(refFor(`${ID}.1`, SECRET)).not.toBe(signApproval(ID, 1, SECRET)?.slice(0, 10));
+  });
+});
+
+// The handle a visitor's browser gets for a signup held for approval: it lets that browser
+// confirm the signup with a late Cloudflare token, and nothing else.
+describe('late-confirmation handles', () => {
+  it('accepts its own signature until it expires', () => {
+    const sig = signConfirm(ID, 2_000, SECRET)!;
+    expect(checkConfirm(ID, 2_000, sig, { now: 1_000, secret: SECRET })).toBe('ok');
+    expect(checkConfirm(ID, 2_000, sig, { now: 2_001, secret: SECRET })).toBe('expired');
+  });
+
+  it("can't be swapped with an approval link signature, either way round", () => {
+    const approval = signApproval(ID, 2_000, SECRET)!;
+    const confirm = signConfirm(ID, 2_000, SECRET)!;
+    expect(checkConfirm(ID, 2_000, approval, { now: 1, secret: SECRET })).toBe('invalid');
+    expect(checkApproval(ID, 2_000, confirm, { now: 1, secret: SECRET })).toBe('invalid');
   });
 });
 
