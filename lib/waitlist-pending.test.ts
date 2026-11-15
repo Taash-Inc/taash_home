@@ -53,10 +53,11 @@ describe('savePending', () => {
 
   it('keeps the campaign fields on a signup that is still waiting for approval', async () => {
     const attribution = {
-      paid_social_platform: 'instagram',
-      paid_social_campaign: 'taash_waitlist',
-      paid_social_content: null,
-      paid_social_submitted_at: '2026-11-19T17:18:00.000Z',
+      campaign_source: 'tiktok',
+      campaign_medium: 'paid_social',
+      campaign_name: 'launch_waitlist',
+      campaign_content: null,
+      campaign_submitted_at: '2026-11-19T17:18:00.000Z',
     } as const;
     fetchMock.mockResolvedValueOnce(json(201, [{ id: ID }]));
     expect(await savePending({ ...signup, attribution })).toEqual({ saved: true, id: ID });
@@ -137,6 +138,22 @@ describe('approval', () => {
     expect((await approvePending(ID)).status).toBe('approved');
     expect(calls()[0]).toContain('paid_social_platform');
     expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toMatchObject(attribution);
+  });
+
+  it('retains a newsletter campaign and its original submission time on approval', async () => {
+    const attribution = {
+      campaign_source: 'taash_newsletter',
+      campaign_medium: 'email',
+      campaign_name: 'launch_waitlist',
+      campaign_content: null,
+      campaign_submitted_at: '2026-11-19T17:18:00+00:00',
+    };
+    fetchMock
+      .mockResolvedValueOnce(json(200, [{ ...ROW, ...attribution }]))
+      .mockResolvedValueOnce(new Response(null, { status: 201 }));
+    expect((await approvePending(ID)).status).toBe('approved');
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toMatchObject(attribution);
+    expect(calls()[0]).toContain('campaign_source');
   });
 
   // PR #60 review: approve read the row, then inserted, then deleted, so a discard landing in

@@ -1,46 +1,54 @@
-export type PaidSocialPlatform = 'facebook' | 'instagram';
+type MetaPlatform = 'facebook' | 'instagram';
 
-type PaidSocialAttribution = {
-  source: PaidSocialPlatform;
-  medium: 'paid_social';
+type CampaignAttribution = {
+  source: string;
+  medium: string;
   campaign: string;
   content: string | null;
 };
 
-export type PaidSocialColumns = {
-  paid_social_platform: PaidSocialPlatform;
+type MetaColumns = {
+  paid_social_platform: MetaPlatform;
   paid_social_campaign: string;
   paid_social_content: string | null;
   paid_social_submitted_at: string;
 };
 
+export type SignupAttributionColumns = {
+  campaign_source: string;
+  campaign_medium: string;
+  campaign_name: string;
+  campaign_content: string | null;
+  campaign_submitted_at: string;
+} & Partial<MetaColumns>;
+
+// Keep the old key so an already-tagged Meta visit survives a website deployment.
 const STORAGE_KEY = 'taash.waitlist.paid-social';
 const TAGS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content'];
 
 function slug(value: unknown): string | null {
   if (typeof value !== 'string' || value.length > 100) return null;
   const normalized = value.trim().toLowerCase();
-  return /^[a-z0-9_-]{1,100}$/.test(normalized) ? normalized : null;
+  return /^[a-z0-9_-]+(?:\.[a-z0-9_-]+)*$/.test(normalized) ? normalized : null;
 }
 
 /** Accept only the campaign fields. Full URLs and click IDs are not stored. */
-export function parsePaidSocialAttribution(input: unknown): PaidSocialAttribution | null {
+function parseCampaignAttribution(input: unknown): CampaignAttribution | null {
   if (!input || typeof input !== 'object') return null;
   const fields = input as Record<string, unknown>;
-  const source = slug(fields.source);
-  const platform =
-    source === 'fb' || source === 'facebook' ? 'facebook'
-      : source === 'ig' || source === 'instagram' ? 'instagram' : null;
+  const tag = slug(fields.source);
+  const source = tag === 'fb' ? 'facebook' : tag === 'ig' ? 'instagram' : tag;
+  const medium = slug(fields.medium);
   const campaign = slug(fields.campaign);
-  if (!platform || slug(fields.medium) !== 'paid_social' || !campaign) return null;
-  return { source: platform, medium: 'paid_social', campaign, content: slug(fields.content) };
+  if (!source || !medium || !campaign) return null;
+  return { source, medium, campaign, content: slug(fields.content) };
 }
 
 /** The latest tagged visit in this tab wins. Untagged navigation keeps that visit's source. */
-export function rememberPaidSocialVisit(query: string, storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null) {
+export function rememberCampaignVisit(query: string, storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null) {
   const params = new URLSearchParams(query);
   if (TAGS.some((tag) => params.has(tag))) {
-    const current = parsePaidSocialAttribution({
+    const current = parseCampaignAttribution({
       source: params.get('utm_source'),
       medium: params.get('utm_medium'),
       campaign: params.get('utm_campaign'),
@@ -57,28 +65,43 @@ export function rememberPaidSocialVisit(query: string, storage: Pick<Storage, 'g
 
   try {
     const saved = storage?.getItem(STORAGE_KEY);
-    return saved ? parsePaidSocialAttribution(JSON.parse(saved)) : null;
+    return saved ? parseCampaignAttribution(JSON.parse(saved)) : null;
   } catch {
     return null;
   }
 }
 
-export function readPaidSocialVisit() {
+export function readCampaignVisit() {
   let storage: Storage | null = null;
   try {
     storage = window.sessionStorage;
   } catch {
     // Access to sessionStorage itself can throw.
   }
-  return rememberPaidSocialVisit(window.location.search, storage);
+  return rememberCampaignVisit(window.location.search, storage);
 }
 
-export function paidSocialColumns(input: unknown): PaidSocialColumns | null {
-  const attribution = parsePaidSocialAttribution(input);
-  return attribution && {
-    paid_social_platform: attribution.source,
-    paid_social_campaign: attribution.campaign,
-    paid_social_content: attribution.content,
-    paid_social_submitted_at: new Date().toISOString(),
+export function campaignColumns(input: unknown): SignupAttributionColumns | null {
+  const attribution = parseCampaignAttribution(input);
+  if (!attribution) return null;
+  const { source, medium, campaign, content } = attribution;
+  const submittedAt = new Date().toISOString();
+  const columns: SignupAttributionColumns = {
+    campaign_source: source,
+    campaign_medium: medium,
+    campaign_name: campaign,
+    campaign_content: content,
+    campaign_submitted_at: submittedAt,
   };
+  // Keep the existing Meta report working for new signups until it is retired.
+  if (medium === 'paid_social' && (source === 'facebook' || source === 'instagram')) {
+    return {
+      ...columns,
+      paid_social_platform: source,
+      paid_social_campaign: campaign,
+      paid_social_content: content,
+      paid_social_submitted_at: submittedAt,
+    };
+  }
+  return columns;
 }

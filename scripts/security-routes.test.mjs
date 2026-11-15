@@ -153,6 +153,28 @@ test('a verified signup saves the platform and campaign from the Meta ad', async
   assert.equal(row.paid_social_campaign, 'taash_waitlist');
   assert.equal(row.paid_social_content, 'overview_carousel');
   assert.ok(Number.isFinite(Date.parse(row.paid_social_submitted_at)));
+  assert.equal(row.campaign_source, row.paid_social_platform);
+  assert.equal(row.campaign_submitted_at, row.paid_social_submitted_at);
+});
+
+test('verified signups retain campaign tags from TikTok, Google Ads, email and partners', async () => {
+  for (const [source, medium] of [
+    ['tiktok', 'paid_social'], ['google', 'cpc'], ['taash_newsletter', 'email'],
+    ['partner.example', 'referral'],
+  ]) {
+    const route = waitlist();
+    const response = await route.POST(request({
+      ...signup, attribution: { source, medium, campaign: 'launch_waitlist', content: 'signup_link' },
+    }));
+    assert.equal(response.status, 201);
+    const row = JSON.parse(route.writes[0].init.body);
+    assert.equal(row.campaign_source, source);
+    assert.equal(row.campaign_medium, medium);
+    assert.equal(row.campaign_name, 'launch_waitlist');
+    assert.equal(row.campaign_content, 'signup_link');
+    assert.ok(Number.isFinite(Date.parse(row.campaign_submitted_at)));
+    assert.equal(row.paid_social_platform, undefined, 'non-Meta data stays out of the existing Meta report');
+  }
 });
 
 test('a held Instagram signup retains its source and original submission time', async () => {
@@ -168,6 +190,8 @@ test('a held Instagram signup retains its source and original submission time', 
   assert.equal(fields?.paid_social_campaign, 'taash_waitlist');
   assert.equal(fields?.paid_social_content, 'overview_carousel');
   assert.ok(Number.isFinite(Date.parse(fields?.paid_social_submitted_at)));
+  assert.equal(fields?.campaign_source, 'instagram');
+  assert.equal(fields?.campaign_medium, 'paid_social');
 });
 
 test('signup still requires a name and rejects a non-string profession', async () => {

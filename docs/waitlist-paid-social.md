@@ -1,5 +1,7 @@
 # Measure paid waitlist signups
 
+For combined reporting across channels, see [Measure waitlist campaigns](waitlist-campaigns.md).
+
 The website recognizes `utm_source=fb` or `ig` (or the full platform name)
 with `utm_medium=paid_social` and a campaign slug. The carousel uses
 `utm_campaign=taash_waitlist&utm_content=overview_carousel`. The website

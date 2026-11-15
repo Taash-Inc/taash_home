@@ -3,7 +3,7 @@ import { isProfession } from '@/lib/professions';
 import { readJsonObject, RequestInputError } from '@/lib/request-json';
 import { CONFIRM_WINDOW_MS, clientIp, hashIp, refFor, signConfirm } from '@/lib/signing';
 import { verifyTurnstile } from '@/lib/turnstile';
-import { paidSocialColumns, type PaidSocialColumns } from '@/lib/waitlist-attribution';
+import { campaignColumns, type SignupAttributionColumns } from '@/lib/waitlist-attribution';
 import { alertRateLimit, approveUrl, savePending } from '@/lib/waitlist-pending';
 import { announceSignup, postToSlack, syncSignup } from '@/lib/waitlist-sync';
 import { isClientCheck } from '@/lib/waitlist-verify';
@@ -22,7 +22,7 @@ async function insertToSupabase(data: {
   email: string;
   profession: string | null;
   monthly_income: string | null;
-} & Partial<PaidSocialColumns>) {
+} & Partial<SignupAttributionColumns>) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
 
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     }
 
     const ref = refFor(sanitizedData.email);
-    const attribution = paidSocialColumns(body.attribution);
+    const attribution = campaignColumns(body.attribution);
     const verified = turnstileToken
       ? await verifyTurnstile(turnstileToken, {
           secret: process.env.TURNSTILE_SECRET_KEY,
@@ -197,7 +197,7 @@ async function holdForApproval(
   reason: string,
   ref: string,
   headers: Headers,
-  attribution: PaidSocialColumns | null
+  attribution: SignupAttributionColumns | null
 ) {
   const ipHash = hashIp(clientIp(headers));
   // The database enforces the hourly limits inside this insert (see lib/waitlist-pending.ts).
