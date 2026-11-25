@@ -2,6 +2,7 @@ import Footer from '@/components/Footer';
 import { BlogPostingSchema } from '@/components/StructuredData';
 import Header from '@/components/Header';
 import { getAllPostSlugs, getPostBySlug, urlFor } from '@/lib/sanity';
+import { searchTitle } from '@/lib/seo-title';
 import { PortableText, PortableTextComponents } from '@portabletext/react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -31,13 +32,16 @@ export async function generateMetadata({ params }: PageProps) {
   }
 
   return {
-    title: post.title,
+    // Short enough for Google's results; the page heading and share previews keep the full title.
+    title: searchTitle(post.title),
     description: post.excerpt || 'A tax guide from Taash for freelancers, creators and small businesses in Nigeria.',
     alternates: { canonical: `/blogs/${slug}` },
     openGraph: {
       type: 'article',
+      url: `/blogs/${slug}`,
       title: post.title,
       description: post.excerpt,
+      ...(post.publishedAt ? { publishedTime: post.publishedAt } : {}),
       images: post.mainImage
         ? [
             {

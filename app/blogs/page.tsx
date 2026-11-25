@@ -16,11 +16,22 @@ const gradients = [
 // Revalidate every hour — blog listing doesn't change frequently
 export const revalidate = 3600;
 
+const title = 'Tax guides for freelancers and creators in Nigeria';
+const description =
+  'Tax tips, guides, and resources for freelancers and creators in Nigeria. Learn how to manage your taxes the easy way.';
+
 export const metadata = {
-  title: 'Tax guides for freelancers and creators in Nigeria',
+  title,
   alternates: { canonical: '/blogs' },
-  description:
-    'Tax tips, guides, and resources for freelancers and creators in Nigeria. Learn how to manage your taxes the easy way.',
+  description,
+  // Without its own openGraph, shares of /blogs used the homepage's title.
+  openGraph: {
+    title,
+    description,
+    url: '/blogs',
+    type: 'website',
+    images: [{ url: '/og-image.png?v=2', width: 1200, height: 630, alt: 'Taash tax guides' }],
+  },
 };
 
 export default async function BlogPage() {
@@ -33,9 +44,16 @@ export default async function BlogPage() {
         <div className='max-w-7xl mx-auto px-6 py-12'>
           {/* Header */}
           <div className='text-center mb-12'>
-            <h1 className='text-4xl md:text-5xl font-bold text-primary-dark mb-4'>Taash Blog</h1>
+            <h1 className='text-4xl md:text-5xl font-bold text-primary-dark mb-4'>
+              Tax guides for freelancers and creators in Nigeria
+            </h1>
             <p className='text-text-gray text-lg max-w-2xl mx-auto'>
-              Tax tips, guides, and resources for freelancers and creators in Nigeria.
+              Plain-English guides to the Nigeria Tax Act 2025 and the rules in force from 2026: what you
+              owe, what you can deduct, and how to register and file. Want a number now? Try the{' '}
+              <Link href='/tax-calculator' className='font-semibold text-brand-700 underline underline-offset-2'>
+                free 2026 tax calculator
+              </Link>
+              .
             </p>
           </div>
 
