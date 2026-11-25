@@ -30,9 +30,74 @@ function setting(name: string) {
   return value;
 }
 
+const SECRET_SETTINGS = [
+  'META_ADS_ACCESS_TOKEN', 'TIKTOK_ADS_ACCESS_TOKEN', 'GOOGLE_ADS_CLIENT_SECRET',
+  'GOOGLE_ADS_REFRESH_TOKEN', 'GOOGLE_ADS_DEVELOPER_TOKEN',
+];
+
+/** Remove credentials from provider text before it is logged. */
+function redact(text: string): string {
+  let clean = text;
+  for (const name of SECRET_SETTINGS) {
+    const secret = process.env[name]?.trim();
+    if (secret) clean = clean.split(secret).join('[redacted]');
+  }
+  return clean
+    .replace(/(access_token|token|secret|key)=[^&\s"']+/gi, '$1=[redacted]')
+    .replace(/[A-Za-z0-9_\-]{40,}/g, '[redacted]')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 200);
+}
+
+/**
+ * A provider answered with an error status. Carries the provider's own error code, message and
+ * trace ID (credentials removed) so the log says why: a wrong ID and a missing permission look
+ * the same as a bare HTTP 400.
+ */
+export class ProviderRequestError extends Error {
+  constructor(
+    readonly status: number,
+    readonly code: string | null,
+    readonly providerMessage: string | null,
+    readonly trace: string | null
+  ) {
+    super('provider_request_failed');
+  }
+}
+
+async function providerError(response: Response): Promise<ProviderRequestError> {
+  let body: unknown = null;
+  try {
+    body = JSON.parse((await response.text()).slice(0, 8_192));
+  } catch {
+    // Not JSON: the status alone is all there is.
+  }
+  const error = body && typeof body === 'object' ? (body as JsonObject).error : null;
+  if (!error || typeof error !== 'object') {
+    // OAuth errors are a plain string: {"error": "invalid_grant", "error_description": "..."}.
+    const oauth = typeof error === 'string' ? error : null;
+    const description = body && typeof body === 'object' ? (body as JsonObject).error_description : null;
+    return new ProviderRequestError(
+      response.status, oauth ? redact(oauth) : null,
+      typeof description === 'string' ? redact(description) : null, null
+    );
+  }
+  const e = error as JsonObject;
+  const parts = [e.code, e.error_subcode].filter((v) => typeof v === 'number' || typeof v === 'string');
+  const kind = typeof e.type === 'string' ? e.type : typeof e.status === 'string' ? e.status : '';
+  const code = [parts.join('/'), kind].filter(Boolean).join(' ') || null;
+  return new ProviderRequestError(
+    response.status,
+    code ? redact(code) : null,
+    typeof e.message === 'string' ? redact(e.message) : null,
+    typeof e.fbtrace_id === 'string' ? redact(e.fbtrace_id) : null
+  );
+}
+
 async function json(url: string | URL, init: RequestInit) {
   const response = await fetch(url, { ...init, redirect: 'error', signal: AbortSignal.timeout(9_000) });
-  if (!response.ok) throw new Error('provider_request_failed');
+  if (!response.ok) throw await providerError(response);
   return object(await response.json());
 }
 
