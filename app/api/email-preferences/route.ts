@@ -7,6 +7,7 @@ import {
 import { setEmailPreference, type EmailPreference } from '@/lib/onesignal';
 import { postToSlack } from '@/lib/waitlist-sync';
 import { readJsonObject, RequestInputError } from '@/lib/request-json';
+import { slackValue } from '@/lib/slack-text';
 import { after, NextRequest, NextResponse } from 'next/server';
 
 type Action = EmailPreference | 'leave';
@@ -54,7 +55,7 @@ function failed(action: Action, email: string | null, error: string) {
   console.error(`Email preferences (${action}) failed:`, error);
   after(() =>
     postToSlack(
-      `⚠️ *Email preference change failed*\n• Action: ${action}\n• Email: ${email ?? 'unknown (token lookup failed)'}\n• Error: ${error}\nThe person saw an error; make the change for them by hand.`
+      `⚠️ *Email preference change failed*\n• Action: ${action}\n• Email: ${email ? slackValue(email) : 'unknown (token lookup failed)'}\n• Error: ${slackValue(error)}\nThe person saw an error; make the change for them by hand.`
     )
   );
   return NextResponse.json({ error: "That didn't save" }, { status: 502 });

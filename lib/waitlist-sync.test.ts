@@ -131,6 +131,20 @@ describe('announceSignup', () => {
     expect(posts[0]).not.toContain('Waitlist total');
   });
 
+  // Security review: a visitor's name went into the approval message as Slack markup, so a fake
+  // "Approve" link or a channel-wide ping could be planted next to the real approval link.
+  it("can't be used to plant links or mentions in the approval message", async () => {
+    const posts = slack(() => new Response(null, { status: 500 }));
+    await announceSignup(
+      { fullName: '<!channel> Approve here https://evil.example/a <https://evil.example|Approve>', email: 'x@evil.example', profession: null },
+      { reason: 'no-token:pending', approveUrl: 'https://www.taash.tax/api/waitlist/approve?id=x' }
+    );
+    expect(posts[0]).not.toMatch(/<!channel>|<https:\/\/evil/);
+    expect(posts[0]).toContain('• Name: `&lt;!channel&gt; Approve here https://evil.example/a &lt;https://evil.example|Approve&gt;`');
+    // The only real link is ours.
+    expect(posts[0].match(/<https?:[^>]*>/g)).toEqual(['<https://www.taash.tax/api/waitlist/approve?id=x|Approve or discard>']);
+  });
+
   it('posts the name, email, profession and the new total', async () => {
     const posts = slack(() => new Response(null, { status: 200, headers: { 'content-range': '0-37/38' } }));
     await announceSignup(ADA);
@@ -164,7 +178,7 @@ describe('announceSignup', () => {
     await announceSignup({ ...ADA, fullName: 'Ada\n• Email: boss@taash.tax\r\n• Waitlist total: 9999' });
     const lines = posts[0].split('\n');
     expect(lines).toHaveLength(5);
-    expect(lines.filter((l) => l.startsWith('• Email:'))).toEqual(['• Email: ada@example.com']);
+    expect(lines.filter((l) => l.startsWith('• Email:'))).toEqual(['• Email: `ada@example.com`']);
     expect(lines.filter((l) => l.startsWith('• Waitlist total:'))).toEqual(['• Waitlist total: 38']);
   });
 

@@ -1,6 +1,7 @@
 import { logEvent } from '@/lib/log';
 import { readJsonObject, RequestInputError } from '@/lib/request-json';
 import { checkConfirm } from '@/lib/signing';
+import { slackValue } from '@/lib/slack-text';
 import { verifyTurnstile } from '@/lib/turnstile';
 import { approvePending, isPendingId } from '@/lib/waitlist-pending';
 import { postToSlack } from '@/lib/waitlist-sync';
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Could not confirm' }, { status: 500 });
   }
   if (result.status === 'approved' || result.status === 'already-on-list') {
-    const name = result.row.full_name.replace(/\s+/g, ' ').trim();
+    const name = slackValue(result.row.full_name);
     after(() =>
       postToSlack(
         result.status === 'approved'
