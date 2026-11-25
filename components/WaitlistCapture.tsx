@@ -39,9 +39,9 @@ const LATE_CHECK_MS = 3 * 60 * 1000;
  * asks for a first name and an email (profession is an optional one-tap choice in the section
  * variant), and the Turnstile check runs invisibly in the background.
  *
- * The check is never a gate (lib/waitlist-verify.ts). It starts once the visitor has touched
- * or scrolled the page with the form nearby, so it has usually finished by the time they press
- * Join. If it hasn't, the submit waits at most GRACE_MS and then sends anyway, with the reason;
+ * The check is never a gate (lib/waitlist-verify.ts). It starts when the visitor taps into the
+ * form, so it runs while they type and has usually finished by the time they press Join. If it
+ * hasn't, the submit waits at most GRACE_MS and then sends anyway, with the reason;
  * the server holds those signups for approval. Requests that can't reach the server are
  * retried, then reported (lib/client-report.ts) so a failure is never invisible.
  *
@@ -98,37 +98,11 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
     }
   };
 
-  // Start the check early: once the visitor has interacted with the page (a tap, scroll or key)
-  // while this form is on or near the screen. Not at page load, because loading Turnstile for
-  // every visitor blocked the main thread for over a second on mid-range Android.
-  useEffect(() => {
-    const form = formRef.current;
-    if (!form || turnstileWanted) return;
-    let near = false;
-    let interacted = false;
-    const maybeStart = () => {
-      if (near && interacted) setTurnstileWanted(true);
-    };
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        near = entry.isIntersecting;
-        maybeStart();
-      },
-      { rootMargin: '300px 0px' }
-    );
-    observer.observe(form);
-    const onInteract = () => {
-      interacted = true;
-      maybeStart();
-    };
-    const events = ['pointerdown', 'touchstart', 'scroll', 'keydown'] as const;
-    for (const type of events) window.addEventListener(type, onInteract, { once: true, passive: true });
-    return () => {
-      observer.disconnect();
-      for (const type of events) window.removeEventListener(type, onInteract);
-    };
-  }, [turnstileWanted]);
-
+  // The check starts on the first focus inside the form (onFocusCapture below), not on any tap
+  // or scroll near it. Cloudflare's challenge runs on the page's main thread in Android WebViews
+  // (Instagram's browser) and kept it busy for 3.7-5 s on a 6x-slowed CPU, so starting it on the
+  // first scroll delayed every tap for visitors who never use the form. Field data agreed: mobile
+  // INP went from ~150 ms to ~2 s in Nigeria after the early start shipped on 13 Nov.
   const start = () => {
     setTurnstileWanted(true);
     if (startedRef.current) return;
