@@ -2,6 +2,8 @@ import Footer from '@/components/Footer';
 import { BlogPostingSchema } from '@/components/StructuredData';
 import Header from '@/components/Header';
 import { getAllPostSlugs, getPostBySlug, urlFor } from '@/lib/sanity';
+import { DEFAULT_SHARE_IMAGE, pageMetadata } from '@/lib/page-metadata';
+import { searchTitle } from '@/lib/seo-title';
 import { PortableText, PortableTextComponents } from '@portabletext/react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -30,25 +32,19 @@ export async function generateMetadata({ params }: PageProps) {
     };
   }
 
-  return {
-    title: post.title,
-    description: post.excerpt || 'A tax guide from Taash for freelancers, creators and small businesses in Nigeria.',
-    alternates: { canonical: `/blogs/${slug}` },
-    openGraph: {
-      type: 'article',
-      title: post.title,
-      description: post.excerpt,
-      images: post.mainImage
-        ? [
-            {
-              url: urlFor(post.mainImage).width(1200).height(630).url(),
-              width: 1200,
-              height: 630,
-            },
-          ]
-        : [],
-    },
-  };
+  const description = post.excerpt || 'A tax guide from Taash for freelancers, creators and small businesses in Nigeria.';
+  return pageMetadata({
+    // Short enough for Google's results; the page heading and share previews keep the full title.
+    title: searchTitle(post.title),
+    shareTitle: post.title,
+    description,
+    path: `/blogs/${slug}`,
+    type: 'article',
+    publishedTime: post.publishedAt,
+    image: post.mainImage
+      ? { url: urlFor(post.mainImage).width(1200).height(630).url(), width: 1200, height: 630, alt: post.title }
+      : DEFAULT_SHARE_IMAGE,
+  });
 }
 
 // Custom components for rendering Portable Text

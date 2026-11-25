@@ -7,6 +7,7 @@ import TaxGuide from '@/components/TaxGuide';
 import WaitlistForm from '@/components/WaitlistForm';
 import { CALCULATOR_FAQ } from '@/lib/faq';
 import { TAX_YEAR } from '@/lib/tax';
+import { pageMetadata } from '@/lib/page-metadata';
 import type { Metadata } from 'next';
 
 /**
@@ -19,13 +20,7 @@ export const revalidate = 3600;
 const title = `Nigeria Tax Calculator ${TAX_YEAR}: PAYE and Self-Employed`;
 const description = `Free ${TAX_YEAR} tax calculator for Nigeria. Work out your PAYE or freelance income tax under the Nigeria Tax Act 2025, with pension, NHF, NHIS and rent relief.`;
 
-export const metadata: Metadata = {
-  title,
-  description,
-  alternates: { canonical: '/tax-calculator' },
-  openGraph: { title, description, url: '/tax-calculator', type: 'website' },
-  twitter: { title, description },
-};
+export const metadata: Metadata = pageMetadata({ title, description, path: '/tax-calculator' });
 
 export default function TaxCalculatorPage() {
   return (

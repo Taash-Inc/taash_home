@@ -1,11 +1,12 @@
+import { pageMetadata } from '@/lib/page-metadata';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: 'Terms & Conditions',
-  alternates: { canonical: '/terms' },
   description: 'Terms and Conditions for using Taash financial management services.',
-};
+  path: '/terms',
+});
 
 export default function TermsPage() {
   return (
