@@ -1,5 +1,6 @@
 import { ensurePreferenceToken, leaveWaitlist, preferencesConfig } from './email-preferences';
 import { logEvent } from './log';
+import { slackValue } from './slack-text';
 import { syncWaitlistContact, type SyncResult, type WaitlistContact } from './onesignal';
 
 /**
@@ -104,14 +105,6 @@ async function countWaitlist(): Promise<number | null> {
 }
 
 /**
- * Slack messages are one fact per line, so a value with its own line breaks could add fake
- * lines (a forged email or total). Collapse every run of whitespace, line breaks included.
- */
-function oneLine(value: string): string {
-  return value.replace(/\s+/g, ' ').trim();
-}
-
-/**
  * Tell the team someone joined. It runs after the response has gone out, and the count is a
  * nice-to-have: if Supabase can't give it, the message goes out without it.
  *
@@ -122,7 +115,7 @@ export async function announceSignup(
   signup: { fullName: string; email: string; profession: string | null },
   unverified?: { reason: string; approveUrl: string | null }
 ): Promise<void> {
-  const details = `• Name: ${oneLine(signup.fullName)}\n• Email: ${oneLine(signup.email)}\n• Profession: ${signup.profession ? oneLine(signup.profession) : 'not given'}`;
+  const details = `• Name: ${slackValue(signup.fullName)}\n• Email: ${slackValue(signup.email)}\n• Profession: ${signup.profession ? slackValue(signup.profession) : 'not given'}`;
   if (unverified) {
     await postToSlack(
       `🟡 *Waitlist signup to approve*\n${details}\n• Why: ${describeReason(unverified.reason)}\n${
@@ -190,7 +183,7 @@ export async function syncSignup(contact: WaitlistContact): Promise<void> {
   console.error('OneSignal sync failed:', result.error);
   await storeFailedSync(contact, result.error);
   await postToSlack(
-    `⚠️ *OneSignal Sync Failed*\n• Email: ${contact.email}\n• Error: ${result.error}\n• Stored for retry in \`${TABLE}\``
+    `⚠️ *OneSignal Sync Failed*\n• Email: ${slackValue(contact.email)}\n• Error: ${slackValue(result.error)}\n• Stored for retry in \`${TABLE}\``
   );
 }
 
@@ -282,7 +275,7 @@ export async function retryFailedSync(sync: FailedSync): Promise<RetryOutcome> {
     const removed = await leaveWaitlist(sync.email, preferencesConfig());
     if (!removed.success) {
       await postToSlack(
-        `⚠️ *A retry re-added someone who left the waitlist*\n• Email: ${sync.email}\n• Error: ${removed.error}\nRemove them from OneSignal by hand.`
+        `⚠️ *A retry re-added someone who left the waitlist*\n• Email: ${slackValue(sync.email)}\n• Error: ${slackValue(removed.error)}\nRemove them from OneSignal by hand.`
       );
     }
     return 'left';

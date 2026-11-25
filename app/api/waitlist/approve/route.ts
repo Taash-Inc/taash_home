@@ -1,5 +1,6 @@
 import { logEvent } from '@/lib/log';
 import { checkApproval } from '@/lib/signing';
+import { slackValue } from '@/lib/slack-text';
 import { approvePending, discardPending, getPending, isPendingId } from '@/lib/waitlist-pending';
 import { postToSlack } from '@/lib/waitlist-sync';
 import { NextRequest, NextResponse } from 'next/server';
@@ -91,8 +92,8 @@ export async function POST(request: NextRequest) {
   }
   await postToSlack(
     result.status === 'approved'
-      ? `✅ *Approved:* ${oneLine(result.row.full_name)} is now on the waitlist. The welcome email is on its way.`
-      : `✅ *Approved:* ${oneLine(result.row.full_name)} was already on the waitlist, so nothing else was needed.`
+      ? `✅ *Approved:* ${slackValue(result.row.full_name)} is now on the waitlist. The welcome email is on its way.`
+      : `✅ *Approved:* ${slackValue(result.row.full_name)} was already on the waitlist, so nothing else was needed.`
   );
   return page(
     'Approved',
@@ -101,8 +102,6 @@ export async function POST(request: NextRequest) {
       : '<p>They were already on the waitlist. Nothing else was needed.</p>'
   );
 }
-
-const oneLine = (text: string) => text.replace(/\s+/g, ' ').trim();
 
 function escape(text: string): string {
   return text.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c);

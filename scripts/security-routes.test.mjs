@@ -264,7 +264,7 @@ test('signup collapses line breaks in the name before saving or alerting', async
   await failed.POST(request(injected));
   await failed.callbacks[0]();
   const lines = failed.slack[0].split('\n');
-  assert.deepEqual(lines.filter((l) => l.startsWith('• Email:')), ['• Email: ada@example.invalid']);
+  assert.deepEqual(lines.filter((l) => l.startsWith('• Email:')), ['• Email: `ada@example.invalid`']);
   assert.equal(lines.filter((l) => l.startsWith('• Error:')).length, 1);
 });
 
@@ -601,4 +601,16 @@ test('a failed auto-approval leaves the signup for manual approval', async () =>
   const route = confirmRoute({ approve: { status: 'error', error: 'Waitlist insert failed: HTTP 500' } });
   assert.equal((await route.POST(request({ confirm: handleFor('good'), turnstileToken: 't' }))).status, 500);
   assert.equal(route.callbacks.length, 0);
+});
+
+// Security review: /api/client-report is callable by anyone who sets an Origin header, and its
+// text went to Slack as markup.
+test('a browser report cannot plant mentions or disguised links in Slack', async () => {
+  const route = clientReport();
+  const report = { type: 'js-error', reason: '<!channel> <https://evil.example/login|Approve this signup>', source: '<!here>.js:1', path: '/<!everyone>' };
+  assert.equal((await route.POST(request(report, fromSite))).status, 204);
+  for (const callback of route.callbacks) await callback();
+  assert.equal(route.slack.length, 1);
+  assert.doesNotMatch(route.slack[0], /<[!@#]|<https?:/);
+  assert.match(route.slack[0], /`&lt;!channel&gt; &lt;https:\/\/evil\.example\/login\|Approve this signup&gt;`/);
 });

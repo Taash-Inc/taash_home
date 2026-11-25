@@ -1,6 +1,7 @@
 import { logEvent } from './log';
 import { APPROVAL_LINK_DAYS, signApproval } from './signing';
 import { SITE_URL } from './site';
+import { slackValue } from './slack-text';
 import type { SignupAttributionColumns } from './waitlist-attribution';
 import { headers, postToSlack, supabase, syncSignup } from './waitlist-sync';
 
@@ -191,7 +192,7 @@ export async function approvePending(id: string): Promise<ApproveResult> {
     if (!(await release(id))) {
       logEvent('error', 'waitlist.pending_release_failed', { id });
       await postToSlack(
-        `🚨 *An approval failed and the signup could not be put back in the queue*\n• Name: ${row.full_name}\n• Email: ${row.email}\n• Error: ${error}\nAdd them to the waitlist by hand.`
+        `🚨 *An approval failed and the signup could not be put back in the queue*\n• Name: ${slackValue(row.full_name)}\n• Email: ${slackValue(row.email)}\n• Error: ${slackValue(error)}\nAdd them to the waitlist by hand.`
       );
     }
     return { status: 'error', error };

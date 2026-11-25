@@ -1,6 +1,7 @@
 import { logEvent } from '@/lib/log';
 import { isProfession } from '@/lib/professions';
 import { readJsonObject, RequestInputError } from '@/lib/request-json';
+import { slackValue } from '@/lib/slack-text';
 import { CONFIRM_WINDOW_MS, clientIp, hashIp, refFor, signConfirm } from '@/lib/signing';
 import { verifyTurnstile } from '@/lib/turnstile';
 import { campaignColumns, type SignupAttributionColumns } from '@/lib/waitlist-attribution';
@@ -238,7 +239,7 @@ function saveFailed(signup: Signup, error: string, ref: string, kind: string) {
   logEvent('error', 'waitlist.save_failed', { ref, kind, error: error.slice(0, 120) });
   after(() =>
     postToSlack(
-      `🚨 *Waitlist signup could not be saved* (${kind})\n• Name: ${signup.fullName}\n• Email: ${signup.email}\n• Profession: ${signup.profession ?? 'not given'}\n• Error: ${error}\nAdd them to the waitlist by hand.`
+      `🚨 *Waitlist signup could not be saved* (${kind})\n• Name: ${slackValue(signup.fullName)}\n• Email: ${slackValue(signup.email)}\n• Profession: ${signup.profession ?? 'not given'}\n• Error: ${slackValue(error)}\nAdd them to the waitlist by hand.`
     )
   );
   return NextResponse.json({ error: 'Failed to join waitlist' }, { status: 500 });
