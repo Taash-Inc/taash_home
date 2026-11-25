@@ -1,5 +1,6 @@
 import Footer from '@/components/Footer';
 import Header from '@/components/Header';
+import { pageMetadata } from '@/lib/page-metadata';
 import { getLatestPosts, urlFor } from '@/lib/sanity';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -20,19 +21,7 @@ const title = 'Tax guides for freelancers and creators in Nigeria';
 const description =
   'Tax tips, guides, and resources for freelancers and creators in Nigeria. Learn how to manage your taxes the easy way.';
 
-export const metadata = {
-  title,
-  alternates: { canonical: '/blogs' },
-  description,
-  // Without its own openGraph, shares of /blogs used the homepage's title.
-  openGraph: {
-    title,
-    description,
-    url: '/blogs',
-    type: 'website',
-    images: [{ url: '/og-image.png?v=2', width: 1200, height: 630, alt: 'Taash tax guides' }],
-  },
-};
+export const metadata = pageMetadata({ title, description, path: '/blogs' });
 
 export default async function BlogPage() {
   const posts = await getLatestPosts(20);

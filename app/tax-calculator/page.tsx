@@ -7,6 +7,7 @@ import TaxGuide from '@/components/TaxGuide';
 import WaitlistForm from '@/components/WaitlistForm';
 import { CALCULATOR_FAQ } from '@/lib/faq';
 import { TAX_YEAR } from '@/lib/tax';
+import { pageMetadata } from '@/lib/page-metadata';
 import type { Metadata } from 'next';
 
 /**
@@ -16,20 +17,10 @@ import type { Metadata } from 'next';
  */
 export const revalidate = 3600;
 
-const OG_IMAGE = { url: '/og-image.png?v=2', width: 1200, height: 630, alt: 'Taash: Nigeria tax calculator 2026' };
-
 const title = `Nigeria Tax Calculator ${TAX_YEAR}: PAYE and Self-Employed`;
 const description = `Free ${TAX_YEAR} tax calculator for Nigeria. Work out your PAYE or freelance income tax under the Nigeria Tax Act 2025, with pension, NHF, NHIS and rent relief.`;
 
-export const metadata: Metadata = {
-  title,
-  description,
-  alternates: { canonical: '/tax-calculator' },
-  // A page's openGraph replaces the layout's whole object, so the share image has to be repeated
-  // here or links to the calculator are shared with no preview image.
-  openGraph: { title, description, url: '/tax-calculator', type: 'website', images: [OG_IMAGE] },
-  twitter: { card: 'summary_large_image', title, description, images: [OG_IMAGE.url] },
-};
+export const metadata: Metadata = pageMetadata({ title, description, path: '/tax-calculator' });
 
 export default function TaxCalculatorPage() {
   return (

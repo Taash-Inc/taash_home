@@ -1,12 +1,12 @@
+import { pageMetadata } from '@/lib/page-metadata';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: 'Privacy Policy',
-  alternates: { canonical: '/privacy' },
-  description:
-    'Privacy Policy for Taash - Learn how we collect, use, and protect your personal information.',
-};
+  description: 'Privacy Policy for Taash - Learn how we collect, use, and protect your personal information.',
+  path: '/privacy',
+});
 
 export default function PrivacyPage() {
   return (
