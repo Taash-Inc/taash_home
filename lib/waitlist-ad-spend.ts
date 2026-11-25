@@ -1,4 +1,4 @@
-import { fetchAdSpend, type AdSpendLink } from './waitlist-ad-spend-providers';
+import { fetchAdSpend, ProviderRequestError, type AdSpendLink } from './waitlist-ad-spend-providers';
 import { logEvent } from './log';
 import { headers, supabase } from './waitlist-sync';
 
@@ -77,7 +77,10 @@ export async function syncWaitlistAdSpend(now = new Date()) {
       } catch (error) {
         result.failed++;
         const reason = error instanceof Error && KNOWN_FAILURES.has(error.message) ? error.message : 'invalid_report';
-        logEvent('error', 'waitlist.ad_spend_link_failed', { link: link.id, provider: link.provider, reason });
+        const details = error instanceof ProviderRequestError
+          ? { status: error.status, provider_code: error.code, provider_message: error.providerMessage, trace: error.trace }
+          : {};
+        logEvent('error', 'waitlist.ad_spend_link_failed', { link: link.id, provider: link.provider, reason, ...details });
       }
     }));
   }

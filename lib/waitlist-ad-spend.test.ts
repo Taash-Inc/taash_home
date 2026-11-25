@@ -123,6 +123,37 @@ describe('daily sync', () => {
     expect(fetchMock.mock.calls.every(([url]) => !String(url).includes('/rpc/'))).toBe(true);
   });
 
+  // 22-24 Nov 2026: Meta answered 400 every day and the log said only "provider_request_failed",
+  // so nobody could tell a wrong ID from a missing permission without Meta's own error.
+  it("logs the provider's own error code and message, never the token", async () => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://db.example.invalid');
+    vi.stubEnv('SUPABASE_SERVICE_KEY', 'test-role');
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    fetchMock
+      .mockResolvedValueOnce(Response.json([link], { headers: { 'content-range': '0-0/1' } }))
+      .mockResolvedValueOnce(json({ currency: 'USD', timezone_name: link.time_zone }))
+      .mockResolvedValueOnce(Response.json({
+        error: {
+          message: "Unsupported get request. Object with ID '456' does not exist, cannot be loaded due to missing permissions, or does not support this operation. access_token=test-meta",
+          type: 'GraphMethodException',
+          code: 100,
+          error_subcode: 33,
+          fbtrace_id: 'AbCdEf0123',
+        },
+      }, { status: 400 }));
+    expect(await syncWaitlistAdSpend(new Date('2026-11-21T13:15:00Z'))).toEqual({ synced: 0, skipped: 0, failed: 1 });
+    const line = JSON.parse(String(error.mock.calls[0][0]));
+    expect(line).toMatchObject({
+      event: 'waitlist.ad_spend_link_failed',
+      reason: 'provider_request_failed',
+      status: 400,
+      provider_code: '100/33 GraphMethodException',
+      trace: 'AbCdEf0123',
+    });
+    expect(line.provider_message).toContain("Object with ID '456' does not exist");
+    expect(JSON.stringify(line)).not.toContain('test-meta');
+  });
+
   it('imports the entire requested window once, including zero-spend days on a successful pull', async () => {
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://db.example.invalid');
     vi.stubEnv('SUPABASE_SERVICE_KEY', 'test-role');
