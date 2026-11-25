@@ -2,6 +2,7 @@
 
 import { sendClientReport } from '@/lib/client-report';
 import { PROFESSIONS } from '@/lib/professions';
+import { signupFailure, type SignupFailure } from '@/lib/signup-error';
 import { readCampaignVisit } from '@/lib/waitlist-attribution';
 import { clearJoined, markJoined, useWaitlistJoined } from '@/lib/waitlist-store';
 import {
@@ -91,6 +92,13 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
         keepalive: true,
       });
       track('Waitlist Confirmed Late', { placement, ok: response.ok });
+      if (!response.ok) {
+        const body: unknown = await response.json().catch(() => ({}));
+        const failure = signupFailure(response.status, body, response.headers.get('x-vercel-mitigated'));
+        if (failure.report) {
+          sendClientReport({ type: 'signup-failed', reason: `late-confirm-${failure.code}`, placement });
+        }
+      }
     } catch {
       track('Waitlist Confirmed Late', { placement, ok: false });
       // The signup is safe either way: it's held, and Slack has the approval link.
@@ -130,24 +138,26 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
 
     try {
       const response = await postSignup(payload);
-      const body: { error?: string; confirm?: string } = await response.json().catch(() => ({}));
+      const body: unknown = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new SignupError(friendlyError(response.status, body.error), `http-${response.status}`);
+        throw new SignupError(signupFailure(response.status, body, response.headers.get('x-vercel-mitigated')));
       }
+      const { confirm } = (body ?? {}) as { confirm?: unknown };
 
       track('Waitlist Joined', { placement, profession: profession ?? 'none', check: check ?? 'passed' });
       // Held for approval: if the check passes in the next few minutes (or already passed while
       // this request was in flight), its token confirms the signup automatically.
-      if (!token && typeof body.confirm === 'string') dispatch({ type: 'held', handle: body.confirm });
+      if (!token && typeof confirm === 'string') dispatch({ type: 'held', handle: confirm });
       setJoinedHere(true);
       markJoined(firstName);
     } catch (err) {
-      const signupError = err instanceof SignupError ? err : null;
-      const code = signupError?.code ?? 'network';
-      setError(signupError?.message ?? 'We couldn’t reach Taash. Check your connection and try again.');
+      const failure = err instanceof SignupError ? err.failure : null;
+      const code = failure?.code ?? 'network';
+      setError(failure?.message ?? 'We couldn’t reach Taash. Check your connection and try again.');
       track('Waitlist Error', { placement, reason: code });
-      // The server already alerts on its own failures (5xx); this covers the ones it never saw.
-      if (code === 'network' || code.startsWith('http-5')) {
+      // Reported when our server may never have heard about it: no connection, a firewall block,
+      // or a server error (lib/signup-error.ts). Its own answers, like a bad email, aren't.
+      if (!failure || failure.report) {
         sendClientReport({ type: 'signup-failed', reason: code, placement });
       }
     } finally {
@@ -352,11 +362,8 @@ export default function WaitlistCapture({ placement }: { placement: Placement })
 }
 
 class SignupError extends Error {
-  constructor(
-    message: string,
-    readonly code: string
-  ) {
-    super(message);
+  constructor(readonly failure: SignupFailure) {
+    super(failure.message);
   }
 }
 
@@ -374,14 +381,6 @@ async function postSignup(payload: string): Promise<Response> {
       await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS_MS[attempt]));
     }
   }
-}
-
-function friendlyError(status: number, message?: string): string {
-  if (status === 429) return message || 'Too many signups right now. Please try again in a few minutes.';
-  if (message === 'Invalid email format')
-    return 'That email address doesn’t look right. Please check it and try again.';
-  if (status >= 500) return 'Something went wrong on our side. Please try again in a moment.';
-  return message || 'Something went wrong. Please try again.';
 }
 
 function Field({
