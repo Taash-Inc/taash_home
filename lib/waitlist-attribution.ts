@@ -32,6 +32,13 @@ function slug(value: unknown): string | null {
   return /^[a-z0-9_-]+(?:\.[a-z0-9_-]+)*$/.test(normalized) ? normalized : null;
 }
 
+/**
+ * Stored when a link has a source and medium but no campaign. The Instagram bio link was missing
+ * one, and dropping the whole visit hid every bio signup (26 Nov 2026). The report only counts
+ * rows with a campaign, so this keeps them visible as their own line.
+ */
+export const CAMPAIGN_NOT_SET = 'not_set';
+
 /** Accept only the campaign fields. Full URLs and click IDs are not stored. */
 function parseCampaignAttribution(input: unknown): CampaignAttribution | null {
   if (!input || typeof input !== 'object') return null;
@@ -39,7 +46,10 @@ function parseCampaignAttribution(input: unknown): CampaignAttribution | null {
   const tag = slug(fields.source);
   const source = tag === 'fb' ? 'facebook' : tag === 'ig' ? 'instagram' : tag;
   const medium = slug(fields.medium);
-  const campaign = slug(fields.campaign);
+  // Only a missing campaign gets the placeholder. One that's there but malformed is junk (or
+  // personal data, like an email address), so the whole visit is dropped as before.
+  const missing = fields.campaign == null || fields.campaign === '';
+  const campaign = missing ? CAMPAIGN_NOT_SET : slug(fields.campaign);
   if (!source || !medium || !campaign) return null;
   return { source, medium, campaign, content: slug(fields.content) };
 }
