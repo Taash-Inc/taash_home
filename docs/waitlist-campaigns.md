@@ -37,6 +37,10 @@ For ad accounts with reporting API access, see [import ad spend automatically](w
    or there are zero confirmed signups. The report includes spend entries
    that produced zero signups.
 
+A link with a source and medium but no `utm_campaign` is still counted, under
+the campaign `not_set`. Add a campaign to the link to give it its own line. A
+link without a source or medium, or with a malformed value, is not counted.
+
 The latest tagged visit in the same browser tab supplies attribution. A
 signup that was held and later approved counts in its original submission
 window. Untagged signups and existing duplicates do not add to these totals.
